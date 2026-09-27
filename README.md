@@ -2,6 +2,8 @@
 
 越算越嗨的竖式算术练习。仿照「ドパドリル」（[@grmchn4ai 的视频](https://x.com/grmchn4ai/status/2103807453406388538)）的玩法做的。
 
+**在线玩：https://wtome.com/play/hisuan/**
+
 用浏览器直接打开 `index.html` 就能玩（没有依赖，也不用构建）。
 
 - 按年级选模式（对应人教版单元，选择会记住）：
@@ -37,3 +39,7 @@ sh tools/mux-ex.sh                 # 以画面里的横幅为基准对齐音画 
 ```
 
 需要 Chrome、ffmpeg 和 `puppeteer-core`（放在别处时用 `PUPPETEER=<路径>` 指定）。`rec/` 不进 git。
+
+## License
+
+MIT。玩法的灵感来自 [@grmchn4ai 的「ドパドリル」](https://x.com/grmchn4ai/status/2103807453406388538)，代码和美术（猫、音乐）是另外做的。
