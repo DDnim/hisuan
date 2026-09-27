@@ -137,6 +137,23 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 
 /* ---------- 演出 ---------- */
 #fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:6}
+.flash{position:absolute;inset:0;z-index:6;pointer-events:none;background:#fff;opacity:0}
+.flash.go{animation:flash .35s ease-out}
+@keyframes flash{0%{opacity:.65}100%{opacity:0}}
+.combo{position:absolute;right:4px;bottom:12px;z-index:3;font-weight:900;color:#fff;-webkit-text-stroke:4px var(--ink);paint-order:stroke fill;transform:rotate(7deg);opacity:0;transition:opacity .2s}
+.combo span{display:inline-block}
+.combo b{font-size:34px}.combo small{font-size:16px;margin-left:2px}
+.combo.on{opacity:1}
+.combo.hot{color:var(--yellow)}
+.combo.fire{color:var(--pink);animation:huef .8s linear infinite}
+.combo span.bump{animation:cbump .3s cubic-bezier(.3,1.8,.5,1)}
+@keyframes cbump{0%{transform:scale(1.7)}100%{transform:none}}
+@keyframes huef{to{filter:hue-rotate(360deg)}}
+.card.aura{animation:aura 1.2s linear infinite}
+@keyframes aura{0%{box-shadow:0 5px 0 var(--ink),0 0 0 4px #ff6fa8,0 0 26px 8px #ff6fa899}33%{box-shadow:0 5px 0 var(--ink),0 0 0 4px #ffd23f,0 0 26px 8px #ffd23f99}66%{box-shadow:0 5px 0 var(--ink),0 0 0 4px #5ad1ff,0 0 26px 8px #5ad1ff99}100%{box-shadow:0 5px 0 var(--ink),0 0 0 4px #ff6fa8,0 0 26px 8px #ff6fa899}}
+.key.hit{animation:khit .3s ease-out}
+@keyframes khit{0%{background:#fff;box-shadow:0 4px 0 var(--ink),0 0 0 5px var(--yellow),0 0 22px 6px #ffd23fcc}}
+.pop-t.rb{color:var(--pink);animation:floatup .9s ease-out forwards,huef .5s linear infinite}
 .pop-t{position:absolute;z-index:7;pointer-events:none;font-weight:900;color:#ffb300;-webkit-text-stroke:2px var(--ink);paint-order:stroke fill;
   white-space:nowrap;transform:translate(-50%,-50%);animation:floatup .9s ease-out forwards}
 @keyframes floatup{0%{opacity:0;transform:translate(-50%,-30%) scale(.6)}15%{opacity:1;transform:translate(-50%,-60%) scale(1.15)}100%{opacity:0;transform:translate(-50%,-190%) scale(1)}}
@@ -211,6 +228,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
       <svg class="bunting" viewBox="0 0 440 34" preserveAspectRatio="none"></svg>
       <div class="friends"></div>
       <div class="mascot" id="mascot"></div>
+      <div class="combo" id="combo"><span><b>0</b><small>连对</small></span></div>
     </div>
     <div class="card" id="card">
       <div class="top"><span class="tag" id="tag">加法</span><span class="qno" id="qno">第1题</span></div>
@@ -224,6 +242,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 
   <canvas id="fx"></canvas>
   <div class="banner" id="banner"><span></span></div>
+  <div class="flash" id="flash"></div>
   <div class="stamp" id="stamp"></div>
   <div class="bigcat" id="bigcat"></div>
 </div>
@@ -462,7 +481,9 @@ const BGM = {
   stop() { clearInterval(this.timer); this.timer = null; },
   tick() {
     const c = SFX.ctx, ex = G.mode === 'ex';
-    const dur = 60 / (ex ? 168 : 112 + G.level * 6) / 4; // 16分音符の長さ
+    const boost = Math.min(G.combo, 12); // 連続正解1回ごとに 4BPM・半音ずつ上げる（12回で頭打ち、ミスで元に戻る）
+    const dur = 60 / ((ex ? 168 : 112 + G.level * 6) + boost * 4) / 4; // 16分音符の長さ
+    this.tp = 2 ** (Math.min(boost, ex ? 7 : 12) / 12);
     if (this.next < c.currentTime - 0.2) this.next = c.currentTime + 0.05; // タブが裏に回って遅れたら追いかけない
     while (this.next < c.currentTime + 0.15) { if (G.sound) this.play(this.step, this.next, dur, ex); this.next += dur; this.step = (this.step + 1) % 64; }
   },
@@ -479,7 +500,7 @@ const BGM = {
   },
   note(f, t, d, type, v) {
     const c = SFX.ctx, o = c.createOscillator(), g = c.createGain();
-    o.type = type; o.frequency.value = f;
+    o.type = type; o.frequency.value = f * (this.tp || 1);
     g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
     o.connect(g).connect(this.out); o.start(t); o.stop(t + d + 0.02);
   },
@@ -513,7 +534,7 @@ const FX = {
     this.x.setTransform(dpr, 0, 0, dpr, 0, 0);
   },
   n(count) { return Math.round(count * (G.reduced ? 0.25 : 1)); },
-  add(p) { if (this.ps.length < 800) this.ps.push(Object.assign({ rot: Math.random() * 6, vr: (Math.random() - .5) * .3, g: .25, drag: .985, life: 70, color: pick(COLORS), size: 8 }, p, { max: p.life || 70 })); },
+  add(p) { if (this.ps.length < 1400) this.ps.push(Object.assign({ rot: Math.random() * 6, vr: (Math.random() - .5) * .3, g: .25, drag: .985, life: 70, color: pick(COLORS), size: 8 }, p, { max: p.life || 70 })); },
   burst(x, y, count, kinds = ['star', 'conf']) {
     for (let i = 0; i < this.n(count); i++) {
       const a = Math.random() * Math.PI * 2, s = 2 + Math.random() * 8;
@@ -525,16 +546,39 @@ const FX = {
     for (let i = 0; i < this.n(count); i++)
       this.add({ k: pick(kinds), x: Math.random() * this.w, y: -20 - Math.random() * 60, vx: (Math.random() - .5) * 2, vy: 2 + Math.random() * 3, g: .05, drag: .995, life: 140 + Math.random() * 60, size: 6 + Math.random() * 6 });
   },
+  firework(x) {
+    this.add({ k: 'rocket', x: x ?? this.w * (0.15 + Math.random() * 0.7), y: this.h + 10, vx: (Math.random() - .5) * 2,
+      vy: -Math.sqrt(0.4 * this.h * (0.5 + Math.random() * 0.3)), g: .2, drag: 1, life: 160, color: '#fff' });
+  },
+  explode(p) {
+    const hue = Math.random() * 360, n = this.n(50);
+    for (let i = 0; i < n; i++) {
+      const a = i / n * Math.PI * 2, s = 2.5 + Math.random() * 3.5;
+      this.add({ k: 'spark', x: p.x, y: p.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, g: .06, drag: .975, life: 55 + Math.random() * 25, color: `hsl(${hue + Math.random() * 70},100%,55%)` });
+    }
+    this.ring(p.x, p.y, '#fff', 4);
+  },
+  // 押したキーから答えのマスへ光の筋を飛ばす
+  beam(x0, y0, x1, y1) {
+    this.add({ k: 'beam', x: x0, y: y0, vx: 0, vy: 0, g: 0, x1, y1, cx: (x0 + x1) / 2 + (Math.random() - .5) * 180, cy: Math.min(y0, y1) - 40, life: 22 });
+  },
   step() {
     const x = this.x;
     x.clearRect(0, 0, this.w, this.h);
     if (!G.reduced && G.mode !== 'idle') {
       if (G.level >= 5 && Math.random() < 0.12) this.rain(1, ['conf', 'streamer']);
       if (G.level >= 6 && Math.random() < 0.25) this.rain(1, ['conf', 'streamer', 'coin', 'heart', 'star']);
+      if (G.level >= 1 && Math.random() < 0.04 + G.level * 0.03)
+        this.add({ k: 'twinkle', x: Math.random() * this.w, y: Math.random() * this.h, vx: 0, vy: -.3, g: 0, life: 50, size: 5 + Math.random() * 7 });
+      if (Math.random() < (G.level >= 6 ? 0.03 : G.level >= 5 ? 0.008 : 0)) this.firework();
     }
     this.ps = this.ps.filter(p => p.life > 0 && p.y < this.h + 80);
     for (const p of this.ps) {
       p.vy += p.g; p.vx *= p.drag; p.vy *= p.drag; p.x += p.vx; p.y += p.vy; p.rot += p.vr; p.life--;
+      if (p.k === 'rocket') {
+        if (p.life % 2 === 0) this.add({ k: 'spark', x: p.x, y: p.y, vx: (Math.random() - .5), vy: 1, g: .02, drag: .95, life: 16, color: '#ffb300' });
+        if (p.vy > -1.2) { this.explode(p); p.life = 0; }
+      }
       if (p.k === 'streamer') { (p.trail ||= []).push([p.x, p.y]); if (p.trail.length > 14) p.trail.shift(); p.vx += Math.sin(p.life / 6) * .35; }
       x.save(); x.globalAlpha = Math.min(1, p.life / 20);
       x.fillStyle = p.color; x.strokeStyle = '#232a4d'; x.lineWidth = 1.5;
@@ -543,6 +587,21 @@ const FX = {
       else if (p.k === 'coin') { x.translate(p.x, p.y); x.scale(Math.abs(Math.cos(p.rot * 2)) + .15, 1); x.beginPath(); x.arc(0, 0, p.size, 0, 7); x.fillStyle = '#ffcf33'; x.fill(); x.strokeStyle = '#c78b00'; x.lineWidth = 2; x.stroke(); }
       else if (p.k === 'heart') { x.translate(p.x, p.y); x.rotate(p.rot / 3); heart(x, p.size); x.fill(); }
       else if (p.k === 'ring') { const t = 1 - p.life / p.max; x.globalAlpha = 1 - t; x.beginPath(); x.arc(p.x, p.y, p.size + t * 90, 0, 7); x.strokeStyle = p.color; x.lineWidth = 8 * (1 - t) + 1; x.stroke(); }
+      else if (p.k === 'spark' || p.k === 'rocket') {
+        x.strokeStyle = p.color; x.lineWidth = p.k === 'rocket' ? 4 : 2.5; x.lineCap = 'round';
+        x.beginPath(); x.moveTo(p.x - p.vx * 3, p.y - p.vy * 3); x.lineTo(p.x, p.y); x.stroke();
+      }
+      else if (p.k === 'beam') {
+        const t = p.life / p.max; x.lineCap = 'round';
+        for (const [w, c] of [[16 * t, `hsla(${(p.max - p.life) * 20 + 320},100%,60%,.75)`], [5 * t, '#fff']]) {
+          x.beginPath(); x.moveTo(p.x, p.y); x.quadraticCurveTo(p.cx, p.cy, p.x1, p.y1); x.lineWidth = w; x.strokeStyle = c; x.stroke();
+        }
+      }
+      else if (p.k === 'twinkle') {
+        const t = Math.sin(Math.PI * p.life / p.max), r = p.size * t; x.globalAlpha = t;
+        x.translate(p.x, p.y); x.fillStyle = '#ffc93c';
+        x.beginPath(); x.moveTo(0, -r * 2); x.quadraticCurveTo(0, 0, r * 2, 0); x.quadraticCurveTo(0, 0, 0, r * 2); x.quadraticCurveTo(0, 0, -r * 2, 0); x.quadraticCurveTo(0, 0, 0, -r * 2); x.fill();
+      }
       else if (p.k === 'streamer' && p.trail.length > 1) { x.beginPath(); x.moveTo(...p.trail[0]); for (const q of p.trail) x.lineTo(...q); x.strokeStyle = p.color; x.lineWidth = 5; x.lineCap = 'round'; x.stroke(); }
       x.restore();
     }
@@ -554,13 +613,14 @@ function heart(x, s) { x.beginPath(); x.moveTo(0, s * .35); x.bezierCurveTo(-s *
 /* ================= 画面の部品 ================= */
 function local(el) { const a = app.getBoundingClientRect(), r = el.getBoundingClientRect(); return { x: r.left - a.left + r.width / 2, y: r.top - a.top + r.height / 2 }; }
 function popText(text, x, y, size = 22) {
-  const el = document.createElement('div'); el.className = 'pop-t'; el.textContent = text;
+  const el = document.createElement('div'); el.className = 'pop-t' + (G.combo >= 8 ? ' rb' : ''); el.textContent = text;
   el.style.left = x + 'px'; el.style.top = y + 'px'; el.style.fontSize = size + 'px';
   app.appendChild(el); setTimeout(() => el.remove(), 950);
 }
 function replay(el, cls = 'go') { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
 function banner(text) { $('#banner span').textContent = text; replay($('#banner')); SFX.banner(); }
 function stamp(text, pink) { const s = $('#stamp'); s.textContent = text; s.classList.toggle('pink', !!pink); replay(s); SFX.stamp(); }
+function flash() { if (!G.reduced) replay($('#flash')); }
 function shake(el = app) { if (!G.reduced) replay(el, 'shake'); }
 function face(mood, ms = 700) {
   const m = $('#mascot'); m.classList.remove('happy', 'sad'); if (mood) m.classList.add(mood);
@@ -619,7 +679,7 @@ function startBase() {
   $('#tLabel').textContent = '目标 ' + mmss(G.total * 12000);
   $('#timer').classList.remove('hurry');
   setDopa(0); show('game'); $('#result').classList.remove('show');
-  BGM.start();
+  BGM.start(); renderCombo();
   nextProblem();
 }
 
@@ -641,7 +701,15 @@ function nextProblem() {
   renderProb(); fitProb(); renderHUD();
 }
 
-function input(key) {
+function renderCombo() {
+  const el = $('#combo'), c = G.combo;
+  el.querySelector('b').textContent = c;
+  el.classList.toggle('on', c >= 2); el.classList.toggle('hot', c >= 5 && c < 10); el.classList.toggle('fire', c >= 10);
+  $('#card').classList.toggle('aura', c >= 5 && !G.reduced);
+  if (c >= 2) replay(el.querySelector('span'), 'bump');
+}
+
+function input(key, src) {
   if (G.locked || !G.prob) return;
   if (key === 'del') { if (G.pending != null) { G.pending = null; renderProb(); } return; }
   const slot = G.prob.slots[G.k], ex = G.mode === 'ex';
@@ -650,16 +718,24 @@ function input(key) {
     G.pending = null; G.justSlot = G.k; G.k++; G.combo++;
     renderProb();
     const cell = document.querySelector(`[data-slot="${slot.i}"]`), { x, y } = local(cell);
+    src ||= document.querySelector(`.key[data-k="${key}"]`);
+    if (src) { replay(src, 'hit'); const k = local(src); FX.beam(k.x, k.y, x, y); }
+    renderCombo();
     const mult = ex ? 8 + G.combo * 2 : 1.6 + G.combo * 0.25;
     const gain = G.dopa * (mult - 1) + 100 * (G.idx + G.exIdx + 1) ** 2 * (ex ? 1000 : 1);
     addDopa(gain, x, y - 30, 20 + Math.min(G.combo, 10) * 1.5);
-    FX.burst(x, y, 12 + G.level * 6, G.level >= 4 ? ['star', 'conf', 'coin', 'heart'] : ['star', 'conf']);
+    FX.burst(x, y, 12 + G.level * 6 + Math.min(G.combo, 20) * 2, G.level >= 4 ? ['star', 'conf', 'coin', 'heart'] : ['star', 'conf']);
     FX.ring(x, y, pick(COLORS), 14);
     SFX.correct(G.combo);
     face('happy', 500);
+    if (G.combo % 5 === 0) { // 5連続ごとの節目
+      G.lastStamp = performance.now(); stamp(G.combo + '连对！');
+      for (let i = 0; i < 3 + G.combo / 5; i++) setTimeout(() => FX.firework(), i * 120);
+      flash();
+    }
     if (G.k === G.prob.slots.length) setTimeout(completeProblem, 120);
   } else {
-    G.pending = key; G.prob.missed = true; G.combo = 0;
+    G.pending = key; G.prob.missed = true; G.combo = 0; renderCombo();
     ex ? G.exMiss++ : G.miss++;
     renderProb(); renderHUD(); replay($('#card'), 'wrong'); SFX.wrong(); face('sad', 900);
     input.t = setTimeout(() => { G.pending = null; renderProb(); }, 700);
@@ -689,6 +765,8 @@ function completeProblem() {
   FX.burst(x, y, 30 + G.level * 12, ['star', 'conf', 'coin', 'heart']);
   FX.ring(x, y, '#ffd23f', 30);
   if (G.level >= 4) FX.rain(30);
+  for (let i = 0; i < (G.level >= 2 ? G.level - 1 : 0); i++) setTimeout(() => FX.firework(x - 120 + Math.random() * 240), i * 140);
+  if (G.level >= 3) flash();
   if (G.level >= 3) shake();
   SFX.complete(G.level);
   face('happy', 900);
@@ -726,7 +804,7 @@ function startEX() {
   setLevel(6); app.classList.add('ex');
   $('#tLabel').textContent = '剩余';
   SFX.fanfare(); FX.rain(60);
-  BGM.start();
+  BGM.start(); renderCombo();
   nextProblem();
 }
 
@@ -755,7 +833,7 @@ function exTimeUp() {
 }
 
 function toStart() {
-  G.mode = 'idle'; G.locked = true; BGM.stop(); setLevel(0); app.classList.remove('ex');
+  G.mode = 'idle'; G.locked = true; BGM.stop(); G.combo = 0; renderCombo(); setLevel(0); app.classList.remove('ex');
   $('#result').classList.remove('show'); show('start');
 }
 
@@ -787,7 +865,7 @@ $('#tMot').addEventListener('click', () => { G.reduced = !G.reduced; syncToggles
 $('#pad').addEventListener('pointerdown', e => {
   const b = e.target.closest('.key'); if (!b) return;
   e.preventDefault(); SFX.on();
-  input(b.dataset.k === 'del' ? 'del' : +b.dataset.k);
+  input(b.dataset.k === 'del' ? 'del' : +b.dataset.k, b);
 });
 $('#panel').addEventListener('click', e => {
   const id = e.target.closest('button')?.id;
