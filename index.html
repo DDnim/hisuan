@@ -35,12 +35,17 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 .screen.show{display:flex}
 
 /* ---------- スタート画面 ---------- */
-#start{align-items:center;justify-content:center;gap:18px;padding:24px}
-.logo{font-size:64px;font-weight:900;letter-spacing:2px;line-height:1;color:var(--pink);
+#start{align-items:center;justify-content:center;gap:14px;padding:20px}
+.logo{font-size:56px;font-weight:900;letter-spacing:2px;line-height:1;color:var(--pink);
   -webkit-text-stroke:3px var(--ink);paint-order:stroke fill;text-shadow:0 6px 0 var(--ink);transform:rotate(-4deg)}
 .logo span:nth-child(2){color:var(--blue)} .logo span:nth-child(3){color:var(--yellow)}
 .sub{font-weight:800;opacity:.7;margin-top:-4px}
-#start .mascot{width:150px;height:140px;animation:bob 2s ease-in-out infinite}
+#start .mascot{width:120px;height:110px;animation:bob 2s ease-in-out infinite}
+.grades{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:100%;max-width:330px}
+.grades button{height:42px;border:3px solid var(--ink);border-radius:12px;background:#fff;box-shadow:0 4px 0 var(--ink);font-size:17px;font-weight:900}
+.grades button:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.grades button.sel{background:var(--pink);color:#fff}
+.gdesc{font-size:14px;font-weight:800;min-height:18px;margin-top:-4px}
 .counts{display:flex;gap:10px}
 .counts button{width:72px;height:54px;border:3px solid var(--ink);border-radius:14px;background:#fff;box-shadow:var(--shadow);font-size:24px;font-weight:900}
 .counts button small{font-size:13px;margin-left:2px}
@@ -108,6 +113,8 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 .prob{flex:1;min-height:0;display:grid;justify-content:center;align-content:center;--cw:48px}
 .cell{display:flex;align-items:center;justify-content:center;font-size:calc(var(--cw)*.74);font-weight:900;font-variant-numeric:tabular-nums;line-height:1}
 .cell.op{color:var(--blue)}
+.cell.dots{font-size:calc(var(--cw)*.36);letter-spacing:-2px}
+.cell.hl{color:var(--blue)}
 .cell.small{font-size:calc(var(--cw)*.42);color:var(--blue);align-items:flex-end}
 .cell.struck{text-decoration:line-through;text-decoration-color:var(--blue);text-decoration-thickness:3px;color:#8a90a8}
 .cell.line{border-bottom:3px solid var(--ink);align-self:stretch;pointer-events:none}
@@ -198,6 +205,8 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
     <h1 class="logo"><span>嗨</span><span>算</span><span>！</span></h1>
     <div class="sub">越算越嗨的竖式练习</div>
     <div class="mascot"></div>
+    <div class="grades" id="grades"></div>
+    <div class="gdesc" id="gdesc"></div>
     <div class="counts">
       <button data-n="6" class="sel">6<small>题</small></button>
       <button data-n="10">10<small>题</small></button>
@@ -332,9 +341,9 @@ function columnProblem(type, a, b) {
   };
 }
 
-// 割り算は筆算（商を上の位から1桁ずつ入力。入力するたびに引き算の行が出る）
+// 割り算の筆算（除数は1桁でも2桁でも可。商を上の位から1桁ずつ入力し、入力するたびに引き算の行が出る）
 function divProblem(D, d) {
-  const S = String(D), n = S.length;
+  const S = String(D), n = S.length, dS = String(d), L = dS.length;
   let pos = 0, cur = +S[0];
   while (cur < d && pos < n - 1) { pos++; cur = cur * 10 + +S[pos]; }
   const steps = [];
@@ -342,25 +351,150 @@ function divProblem(D, d) {
     const q = Math.floor(cur / d), p = q * d, rem = cur - p, next = j < n - 1 ? rem * 10 + +S[j + 1] : rem;
     steps.push({ j, cur, q, p, next }); cur = next;
   }
-  const cols = n + 1;
-  const slots = steps.map((s, i) => ({ i, d: s.q, r: 0, c: 1 + s.j }));
+  const cols = L + n;
+  const slots = steps.map((s, i) => ({ i, d: s.q, r: 0, c: L + s.j }));
   return {
     type: 'div', cols, slots, rows: [1.15, 1.15, ...steps.flatMap(() => [0.95, 0.95])],
     build(k, pending) {
-      const cells = [{ r: 1, c: 0, t: d }];
-      [...S].forEach((x, i) => cells.push({ r: 1, c: 1 + i, t: x, cls: 'dvd' + (i === 0 ? ' first' : '') }));
+      const cells = [...dS].map((x, i) => ({ r: 1, c: i, t: x }));
+      [...S].forEach((x, i) => cells.push({ r: 1, c: L + i, t: x, cls: 'dvd' + (i === 0 ? ' first' : '') }));
       steps.slice(0, k).forEach((s, i) => {
-        const P = String(s.p), N = String(s.next), nEnd = s.j < n - 1 ? 2 + s.j : 1 + s.j;
+        const P = String(s.p), N = String(s.next), nEnd = L + s.j + (s.j < n - 1 ? 1 : 0);
         const w = Math.max(P.length, String(s.cur).length);
-        for (let x = 0; x < w; x++) cells.push({ r: 2 + 2 * i, c: 1 + s.j - x, t: x < P.length ? P[P.length - 1 - x] : '', cls: 'ul' });
+        for (let x = 0; x < w; x++) cells.push({ r: 2 + 2 * i, c: L + s.j - x, t: x < P.length ? P[P.length - 1 - x] : '', cls: 'ul' });
         [...N].reverse().forEach((x, m) => cells.push({ r: 3 + 2 * i, c: nEnd - m, t: x }));
       });
       slotCells(cells, slots, k, pending);
       return cells;
     },
-    hint(k) { return k >= steps.length ? `${D} ÷ ${d} = ${D / d}` : `商的${PLACES[n - 1 - steps[k].j]}：${steps[k].cur} 里有几个 ${d}？`; },
+    hint(k) {
+      if (k >= steps.length) { const r = D % d; return `${D} ÷ ${d} = ${Math.floor(D / d)}` + (r ? ` …… ${r}` : ''); }
+      const s = steps[k], guess = L > 1 && d % 10 ? `（${d}≈${Math.round(d / 10) * 10}）` : '';
+      return `商的${PLACES[n - 1 - s.j]}：${s.cur} 里有几个 ${d}？${guess}`;
+    },
   };
 }
+
+// 乘数が2桁以上の掛け算の筆算（部分積を1行ずつ書いてから足す）
+function longMulProblem(a, b) {
+  const A = String(a), B = String(b), m = B.length, r = a * b, R = String(r);
+  const parts = [...B].reverse().map((x, j) => ({ j, bj: +x, P: String(a * +x) }));
+  const w = Math.max(A.length, B.length, R.length, ...parts.map(p => p.P.length + p.j));
+  const cols = w + 1, col = i => cols - 1 - i;
+  const slots = [];
+  parts.forEach(p => [...p.P].reverse().forEach((d, i) => slots.push({ i: slots.length, d: +d, r: 2 + p.j, c: col(i + p.j), part: p.j })));
+  [...R].reverse().forEach((d, i) => slots.push({ i: slots.length, d: +d, r: 2 + m, c: col(i), part: -1, pi: i }));
+  return {
+    type: 'mul', cols, slots, rows: [1.15, 1.15, ...parts.map(() => 1.05), 1.2],
+    build(k, pending) {
+      const now = slots[k]?.part;
+      const cells = [...A].reverse().map((x, i) => ({ r: 0, c: col(i), t: x }));
+      cells.push({ r: 1, c: 0, t: '×', cls: 'op' });
+      [...B].reverse().forEach((x, i) => cells.push({ r: 1, c: col(i), t: x, cls: i === now ? 'hl' : '' }));
+      cells.push({ r: 1, c: 0, span: cols, cls: 'line' }, { r: 1 + m, c: 0, span: cols, cls: 'line' });
+      slotCells(cells, slots, k, pending);
+      return cells;
+    },
+    hint(k) {
+      if (k >= slots.length) return `${a} × ${b} = ${r}`;
+      const s = slots[k];
+      if (s.part >= 0) return `第${s.part + 1}步：${a} × ${parts[s.part].bj}` + (s.part ? `，从${PLACES[s.part]}写起` : '');
+      return `两行加起来：${PLACES[s.pi]}`;
+    },
+  };
+}
+
+// 横式の口算（答えは左から入力。割り算は余りも入力できる）
+function oralProblem(a, op, b, withRem) {
+  const q = op === '+' ? a + b : op === '−' ? a - b : op === '×' ? a * b : Math.floor(a / b);
+  const rem = op === '÷' ? a % b : 0, Q = String(q);
+  const items = [...String(a), op, ...String(b), '='];
+  const slots = [];
+  let c = items.length;
+  [...Q].forEach(d => slots.push({ i: slots.length, d: +d, r: 0, c: c++ }));
+  if (withRem) { c++; [...String(rem)].forEach(d => slots.push({ i: slots.length, d: +d, r: 0, c: c++ })); }
+  return {
+    type: { '+': 'add', '−': 'sub', '×': 'mul', '÷': 'div' }[op], oral: true, cols: c, slots, rows: [1.4],
+    // 同じ数の桁はくっつけて並べる（数字の列は狭く、記号と答えのマスは広く）
+    colW: Array.from({ length: c }, (_, i) => i < items.length ? (/\d/.test(items[i]) ? 0.62 : 1) : slots.some(s => s.c === i) ? 0.95 : 1.1),
+    build(k, pending) {
+      const cells = items.map((t, i) => ({ r: 0, c: i, t, cls: /\d/.test(t) ? '' : 'op' }));
+      if (withRem) cells.push({ r: 0, c: items.length + Q.length, t: '……', cls: 'op dots' });
+      slotCells(cells, slots, k, pending);
+      return cells;
+    },
+    hint(k) {
+      if (k >= slots.length) return `${a} ${op} ${b} = ${q}` + (withRem ? ` …… ${rem}` : '');
+      if (withRem && k >= Q.length) return `余数 = ${a} − ${b} × ${q}，要比 ${b} 小`;
+      if (!this.missed) return Q.length > 1 && k === 0 ? '从左往右填' : '';
+      // 間違えたらやり方のヒントを出す
+      if (op === '+' && a < 10 && b < 10 && q > 10) return `凑十：${a} + ${10 - a} = 10，10 + ${b - (10 - a)} = ?`;
+      if (op === '−' && a > 10 && a < 20 && b < 10 && b > a % 10) return `破十：10 − ${b} = ${10 - b}，${10 - b} + ${a - 10} = ?`;
+      if (op === '×') return `想口诀：${a} × ${b}`;
+      if (op === '÷') return withRem ? `想口诀：${b} × 几 最接近 ${a}，又不超过？` : `想口诀：几 × ${b} = ${a}？`;
+      return a >= 10 ? '先算整十，再算个位' : '';
+    },
+  };
+}
+
+/* ---- 学年ごとの出題（人教版の単元に合わせる） ---- */
+const o = oralProblem;
+const nz = (lo, hi) => { let v; do v = ri(lo, hi); while (String(v).includes('0')); return v; }; // 各桁に 0 が無い数
+function vsub(aLo, aHi, bLo, gap) {
+  const a = ri(aLo, aHi); let b = ri(bLo, a - gap);
+  if (a % 10 < 9 && a % 10 >= b % 10 && Math.random() < 0.7) b = b - (b % 10) + ri(a % 10 + 1, 9); // 7割は一の位で借りが出る
+  if (b >= a) b -= 10;
+  return columnProblem('sub', a, b);
+}
+function vdiv(d, qLo, qHi, remRate) {
+  const q = ri(qLo, qHi), r = Math.random() < remRate ? ri(1, d - 1) : 0;
+  return divProblem(q * d + r, d);
+}
+const P = {
+  add10: () => { const a = ri(1, 9); return o(a, '+', ri(1, 10 - a)); },
+  sub10: () => { const a = ri(3, 10); return o(a, '−', ri(1, a - 1)); },
+  carryAdd: () => { const a = ri(2, 9); return o(a, '+', ri(11 - a, 9)); },
+  teen: () => { const a = ri(11, 17); return Math.random() < .5 ? o(a, '+', ri(1, 19 - a)) : o(a, '−', ri(1, a % 10 || 1)); },
+  borrowSub: () => { const a = ri(11, 18); return o(a, '−', ri(a % 10 + 1, 9)); },
+  twoOne: () => { const a = ri(21, 89); return Math.random() < .5 ? o(a, '+', ri(1, 9)) : o(a, '−', ri(1, 9)); },
+  twoTens: () => { const a = ri(12, 89); return a < 80 && Math.random() < .5 ? o(a, '+', 10 * ri(1, Math.floor((99 - a) / 10))) : o(a, '−', 10 * ri(1, Math.floor(a / 10))); },
+  twoTwo: () => { if (Math.random() < .5) { const a = ri(11, 78); return o(a, '+', ri(11, 99 - a)); } const a = ri(30, 99); return o(a, '−', ri(11, a - 5)); },
+  times: (lo, hi) => { const a = ri(lo, hi), b = ri(1, 9); return Math.random() < .5 ? o(a, '×', b) : o(b, '×', a); },
+  divFact: (lo, hi) => { const b = ri(lo, hi); return o(b * ri(1, 9), '÷', b); },
+  remDiv: () => { const b = ri(2, 9); return o(b * ri(1, 9) + ri(1, b - 1), '÷', b, true); },
+  vadd2: () => { const a = ri(12, 88); return columnProblem('add', a, ri(11, 99 - a)); },
+  vsub2: () => vsub(31, 99, 11, 10),
+};
+const GRADES = [
+  { name: '一年级上', desc: '20以内加减法、进位加法', sec: 6,
+    gen: lv => pick(lv === 0 ? [P.add10, P.sub10] : [P.carryAdd, P.carryAdd, P.teen, P.sub10])() },
+  { name: '一年级下', desc: '20以内退位减法、100以内口算', sec: 8,
+    gen: lv => pick(lv === 0 ? [P.borrowSub, P.borrowSub, P.carryAdd] : lv === 1 ? [P.borrowSub, P.twoOne, P.twoTens] : [P.twoTwo, P.twoOne, P.borrowSub])() },
+  { name: '二年级上', desc: '100以内笔算加减、表内乘法', sec: 10,
+    gen: lv => pick(lv === 0 ? [() => P.times(2, 5), P.vadd2, P.vsub2] : [() => P.times(2, 9), () => P.times(6, 9), P.vadd2, P.vsub2])() },
+  { name: '二年级下', desc: '表内除法、有余数的除法', sec: 9,
+    gen: lv => pick(lv === 0 ? [() => P.divFact(2, 6), () => P.divFact(2, 9)] : [() => P.divFact(2, 9), P.remDiv, P.remDiv, () => P.times(2, 9)])() },
+  { name: '三年级上', desc: '万以内加减法、多位数乘一位数', sec: 14,
+    gen: lv => pick(lv === 0
+      ? [() => columnProblem('add', ri(105, 899), ri(15, 99)), () => vsub(120, 999, 15, 20), () => columnProblem('mul', ri(12, 49), ri(2, 9))]
+      : lv === 1
+        ? [() => columnProblem('add', ri(105, 899), ri(105, 999)), () => vsub(300, 999, 105, 50), () => columnProblem('mul', ri(102, 399), ri(2, 9))]
+        : [() => columnProblem('add', ri(1000, 8999), ri(1000, 8999)), () => vsub(1200, 9999, 150, 100), () => columnProblem('mul', ri(1002, 4999), ri(3, 9))])() },
+  { name: '三年级下', desc: '除数是一位数的除法、两位数乘两位数', sec: 20,
+    gen: lv => { const d = ri(2, 9); return pick(lv === 0
+      ? [() => vdiv(d, Math.ceil(40 / d), Math.floor(999 / d), 0), () => longMulProblem(ri(11, 39), nz(11, 29))]
+      : lv === 1
+        ? [() => vdiv(d, Math.ceil(100 / d), Math.floor(990 / d), .4), () => longMulProblem(ri(12, 99), nz(12, 99))]
+        : [() => vdiv(d, Math.ceil(1000 / d), Math.floor(9900 / d), .4), () => longMulProblem(ri(21, 99), nz(21, 99))])(); } },
+  { name: '四年级上', desc: '三位数乘两位数、除数是两位数的除法', sec: 28,
+    gen: lv => pick(lv === 0
+      ? [() => longMulProblem(ri(101, 399), nz(11, 39)), () => vdiv(pick([ri(2, 9) * 10, ri(11, 39)]), 2, 9, .3)]
+      : lv === 1
+        ? [() => longMulProblem(ri(101, 999), nz(11, 99)), () => vdiv(ri(11, 59), 2, 99, .4)]
+        : [() => longMulProblem(ri(301, 999), nz(21, 99)), () => vdiv(ri(12, 99), 10, 99, .4)])() },
+];
+const GR = () => GRADES[G.grade];
+const TYPE_NAME = { add: '加法', sub: '减法', mul: '乘法', div: '除法' };
 
 function slotCells(cells, slots, k, pending) {
   for (const s of slots) {
@@ -369,45 +503,9 @@ function slotCells(cells, slots, k, pending) {
   }
 }
 
-function genProblem(type, level) { // level 0:やさしい 1:ふつう 2:EX
-  if (type === 'add') {
-    if (level === 0) return columnProblem('add', ri(12, 89), ri(12, 89));
-    if (level === 1) return columnProblem('add', ri(105, 899), ri(15, 99));
-    return columnProblem('add', ri(1000, 8999), ri(1000, 8999));
-  }
-  if (type === 'sub') {
-    let a, b;
-    if (level === 0) { a = ri(31, 99); b = ri(5, a - 11); }
-    else if (level === 1) { a = ri(120, 999); b = ri(15, a - 20); }
-    else { a = ri(1200, 9999); b = ri(150, a - 100); }
-    // 7割は一の位で借りが出るようにする
-    if (a % 10 < 9 && a % 10 >= b % 10 && Math.random() < 0.7) b = b - (b % 10) + ri(a % 10 + 1, 9);
-    if (b >= a) b -= 10;
-    return columnProblem('sub', a, b);
-  }
-  if (type === 'mul') {
-    if (level === 0) return columnProblem('mul', ri(12, 49), ri(2, 9));
-    if (level === 1) return columnProblem('mul', ri(102, 399), ri(2, 9));
-    return columnProblem('mul', ri(1002, 4999), ri(3, 9));
-  }
-  const d = ri(2, 9);
-  const [lo, hi] = level === 2 ? [1000, 9999] : [100, 999];
-  const q = ri(Math.ceil(lo / d), Math.floor(hi / d));
-  return divProblem(q * d, d);
-}
-const TYPE_NAME = { add: '加法', sub: '减法', mul: '乘法', div: '除法' };
-
-function planTypes(total) {
-  const pool = [];
-  while (pool.length < total - 1) pool.push(...['add', 'sub', 'mul', 'add', 'sub', 'div']);
-  const list = pool.slice(0, total - 1).sort(() => Math.random() - 0.5);
-  list.push('div'); // 最後の1題は割り算
-  return list;
-}
-
 /* ================= 状態 ================= */
 const G = {
-  mode: 'idle', total: 6, sound: true, reduced: false,
+  mode: 'idle', total: 6, grade: Math.min(GRADES.length - 1, +(localStorage.getItem('hisuan.grade') || 0)), sound: true, reduced: false,
   types: [], idx: -1, prob: null, k: 0, pending: null, locked: true, justSlot: -1,
   ok: 0, miss: 0, firstTry: 0, dopa: 0, combo: 0, lastUnit: 0, lastStamp: 0, level: 0,
   t0: 0, baseTime: 0, score: 0, exIdx: 0, exOk: 0, exMiss: 0, exEnd: 0,
@@ -655,7 +753,7 @@ function setDopa(v) {
 }
 function renderProb() {
   const p = G.prob, prob = $('#prob');
-  prob.style.gridTemplateColumns = `repeat(${p.cols},var(--cw))`;
+  prob.style.gridTemplateColumns = p.colW ? p.colW.map(f => `calc(var(--cw)*${f})`).join(' ') : `repeat(${p.cols},var(--cw))`;
   prob.style.gridTemplateRows = p.rows.map(f => `calc(var(--cw)*${f})`).join(' ');
   prob.innerHTML = p.build(G.k, G.pending).map(c =>
     `<div class="cell ${c.cls || ''}" style="grid-row:${c.r + 1};grid-column:${c.c + 1}${c.span ? ' / span ' + c.span : ''}"${c.slot != null ? ` data-slot="${c.slot}"` : ''}>${c.t ?? ''}</div>`).join('');
@@ -664,7 +762,7 @@ function renderProb() {
 function fitProb() {
   if (!G.prob) return;
   const prob = $('#prob'), p = G.prob;
-  const cw = Math.max(20, Math.min(64, prob.clientWidth / (p.cols + 0.6), prob.clientHeight / p.rows.reduce((a, b) => a + b, 0)));
+  const cw = Math.max(20, Math.min(64, prob.clientWidth / ((p.colW ? p.colW.reduce((a, b) => a + b, 0) : p.cols) + 0.6), prob.clientHeight / p.rows.reduce((a, b) => a + b, 0)));
   prob.style.setProperty('--cw', cw + 'px');
 }
 addEventListener('resize', fitProb);
@@ -673,10 +771,10 @@ addEventListener('resize', fitProb);
 function show(id) { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('show', s.id === id)); }
 
 function startBase() {
-  Object.assign(G, { mode: 'base', types: planTypes(G.total), idx: -1, ok: 0, miss: 0, firstTry: 0, dopa: 0, combo: 0, lastUnit: 0,
+  Object.assign(G, { mode: 'base', idx: -1, ok: 0, miss: 0, firstTry: 0, dopa: 0, combo: 0, lastUnit: 0,
     exIdx: 0, exOk: 0, exMiss: 0, done: [], t0: performance.now() });
   setLevel(0); app.classList.remove('ex');
-  $('#tLabel').textContent = '目标 ' + mmss(G.total * 12000);
+  $('#tLabel').textContent = '目标 ' + mmss(G.total * GR().sec * 1000);
   $('#timer').classList.remove('hurry');
   setDopa(0); show('game'); $('#result').classList.remove('show');
   BGM.start(); renderCombo();
@@ -688,16 +786,16 @@ function nextProblem() {
     G.idx++;
     if (G.idx >= G.total) return endBase();
     if (G.idx === G.total - 1 && G.total > 1) banner('最后1题');
-    G.prob = genProblem(G.types[G.idx], G.idx < G.total / 2 ? 0 : 1);
+    G.prob = GR().gen(G.idx < G.total / 2 ? 0 : 1);
     $('#qno').textContent = `第${G.idx + 1}题`;
   } else if (G.mode === 'ex') {
     if (performance.now() >= G.exEnd) return;
     G.exIdx++; banner('EX ' + G.exIdx);
-    G.prob = genProblem(pick(['add', 'sub', 'mul', 'div']), 2);
+    G.prob = GR().gen(2);
     $('#qno').textContent = 'EX ' + G.exIdx;
   } else return;
   G.prob.missed = false; G.k = 0; G.pending = null; G.justSlot = -1; G.locked = false;
-  $('#tag').textContent = TYPE_NAME[G.prob.type];
+  $('#tag').textContent = (G.prob.oral ? '口算 · ' : '') + TYPE_NAME[G.prob.type];
   renderProb(); fitProb(); renderHUD();
 }
 
@@ -782,7 +880,7 @@ function endBase() {
   if (perfect) { replay($('#bigcat')); SFX.fanfare(); FX.rain(80, ['conf', 'streamer', 'coin', 'heart', 'star']); }
   setTimeout(() => {
     $('#panel').innerHTML = `
-      <span class="rtag">成绩</span>
+      <span class="rtag">${GR().name} · 成绩</span>
       <div class="score"><b>${G.score}</b><span>分</span></div>
       <div class="stats">
         <div><small>正确</small><b>${G.ok}题</b></div>
@@ -816,7 +914,7 @@ function exTimeUp() {
     const total = G.score + 10 * G.exOk;
     stamp(total + '分', true); SFX.fanfare(); FX.rain(80, ['conf', 'streamer', 'coin', 'heart', 'star']);
     $('#panel').innerHTML = `
-      <span class="rtag">EX 结束</span>
+      <span class="rtag">${GR().name} · EX 结束</span>
       <div class="score"><b>${total}</b><span>分</span></div>
       <div class="sum">基本 ${G.score} ＋ EX ${10 * G.exOk}</div>
       <div class="stats">
@@ -854,6 +952,14 @@ function syncToggles() {
   $('#tMot').textContent = '✦ 动效：' + (G.reduced ? '减弱' : '全开');
   app.classList.toggle('reduced', G.reduced);
 }
+function renderGrades() {
+  $('#grades').innerHTML = GRADES.map((g, i) => `<button data-g="${i}" class="${i === G.grade ? 'sel' : ''}">${g.name[0]}${g.name[3]}</button>`).join('');
+  $('#gdesc').textContent = GR().name + '：' + GR().desc;
+}
+$('#grades').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  G.grade = +b.dataset.g; localStorage.setItem('hisuan.grade', G.grade); renderGrades(); SFX.tap();
+});
 document.querySelectorAll('.counts button').forEach(b => b.addEventListener('click', () => {
   document.querySelectorAll('.counts button').forEach(x => x.classList.toggle('sel', x === b));
   G.total = +b.dataset.n; SFX.tap();
@@ -880,7 +986,7 @@ addEventListener('keydown', e => {
   }
 });
 
-buildStatic(); syncToggles(); FX.init();
+buildStatic(); renderGrades(); syncToggles(); FX.init();
 if (matchMedia('(prefers-reduced-motion: reduce)').matches) { G.reduced = true; syncToggles(); }
 </script>
 </body>
