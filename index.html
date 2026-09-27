@@ -115,6 +115,12 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 .cell.op{color:var(--blue)}
 .cell.dots{font-size:calc(var(--cw)*.36);letter-spacing:-2px}
 .cell.hl{color:var(--blue)}
+.cell.pic{font-size:calc(var(--cw)*.78);line-height:1}
+.pics{display:flex;flex-wrap:wrap;justify-content:center;align-content:center;gap:calc(var(--cw)*.1);max-width:100%}
+.pics i{font-style:normal;position:relative}
+.pics b{font-weight:400}
+.pics i.gone b{opacity:.3}
+.pics i.gone::after{content:"✕";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--red);font-weight:900;opacity:1}
 .cell.small{font-size:calc(var(--cw)*.42);color:var(--blue);align-items:flex-end}
 .cell.struck{text-decoration:line-through;text-decoration-color:var(--blue);text-decoration-thickness:3px;color:#8a90a8}
 .cell.line{border-bottom:3px solid var(--ink);align-self:stretch;pointer-events:none}
@@ -437,6 +443,33 @@ function oralProblem(a, op, b, withRem) {
   };
 }
 
+// 学前向けの絵の問題（数える・絵を見て足す・引く）。字が読めなくても絵で分かるようにする
+function picProblem(kind, a, b, emo) {
+  const q = kind === 'add' ? a + b : kind === 'sub' ? a - b : a, Q = [...String(q)];
+  const pics = (n, gone = 0) => `<span class="pics">${Array.from({ length: n }, (_, i) => `<i class="${i >= n - gone ? 'gone' : ''}"><b>${emo}</b></i>`).join('')}</span>`;
+  const count = kind === 'count', op = kind === 'add' ? '+' : '−';
+  const colW = count ? [1.6, ...Q.map(() => 1), 1.6] : [2.6, 0.8, 2.6, 0.8, ...Q.map(() => 1)];
+  const s0 = count ? 1 : 4;
+  const slots = Q.map((d, i) => ({ i, d: +d, r: 1, c: s0 + i }));
+  return {
+    type: count ? 'count' : kind, tagText: count ? '数一数' : '看图 · ' + TYPE_NAME[kind], cols: colW.length, colW, slots, rows: [count ? 2.4 : 2.9, 1.3],
+    build(k, pending) {
+      const cells = count ? [{ r: 0, c: 0, span: colW.length, t: pics(a), cls: 'pic' }]
+        : kind === 'add' ? [{ r: 0, c: 0, t: pics(a), cls: 'pic' }, { r: 0, c: 1, t: '+', cls: 'op' }, { r: 0, c: 2, t: pics(b), cls: 'pic' }]
+        : [{ r: 0, c: 0, span: 3, t: pics(a, b), cls: 'pic' }];
+      if (!count) cells.push({ r: 1, c: 0, t: a }, { r: 1, c: 1, t: op, cls: 'op' }, { r: 1, c: 2, t: b }, { r: 1, c: 3, t: '=', cls: 'op' });
+      slotCells(cells, slots, k, pending);
+      return cells;
+    },
+    hint(k) {
+      if (k >= slots.length) return count ? `一共 ${q} 个` : `${a} ${op} ${b} = ${q}`;
+      return count ? '数一数，一共有几个？' : kind === 'add' ? '合起来，一共有几个？' : `划掉 ${b} 个，还剩几个？`;
+    },
+  };
+}
+const TYPE_NAME = { add: '加法', sub: '减法', mul: '乘法', div: '除法' };
+const EMOJI = ['🍎', '🍓', '🐟', '⭐', '🐱', '🎈', '🍌', '🚗', '🐤', '🌸'];
+
 /* ---- 学年ごとの出題（人教版の単元に合わせる） ---- */
 const o = oralProblem;
 const nz = (lo, hi) => { let v; do v = ri(lo, hi); while (String(v).includes('0')); return v; }; // 各桁に 0 が無い数
@@ -451,6 +484,9 @@ function vdiv(d, qLo, qHi, remRate) {
   return divProblem(q * d + r, d);
 }
 const P = {
+  count: (lo, hi) => picProblem('count', ri(lo, hi), 0, pick(EMOJI)),
+  picAdd: max => { const a = ri(1, max - 1); return picProblem('add', a, ri(1, max - a), pick(EMOJI)); },
+  picSub: max => { const a = ri(2, max); return picProblem('sub', a, ri(1, a - 1), pick(EMOJI)); },
   add10: () => { const a = ri(1, 9); return o(a, '+', ri(1, 10 - a)); },
   sub10: () => { const a = ri(3, 10); return o(a, '−', ri(1, a - 1)); },
   carryAdd: () => { const a = ri(2, 9); return o(a, '+', ri(11 - a, 9)); },
@@ -466,6 +502,10 @@ const P = {
   vsub2: () => vsub(31, 99, 11, 10),
 };
 const GRADES = [
+  { name: '学前', short: '学前', desc: '数一数、看图做10以内加减', sec: 8,
+    gen: lv => pick(lv === 0 ? [() => P.count(1, 5), () => P.count(1, 5), () => P.picAdd(5)]
+      : lv === 1 ? [() => P.count(3, 10), () => P.picAdd(5), () => P.picSub(5)]
+        : [() => P.picAdd(10), () => P.picSub(10), () => P.count(5, 10)])() },
   { name: '一年级上', desc: '20以内加减法、进位加法', sec: 6,
     gen: lv => pick(lv === 0 ? [P.add10, P.sub10] : [P.carryAdd, P.carryAdd, P.teen, P.sub10])() },
   { name: '一年级下', desc: '20以内退位减法、100以内口算', sec: 8,
@@ -494,7 +534,7 @@ const GRADES = [
         : [() => longMulProblem(ri(301, 999), nz(21, 99)), () => vdiv(ri(12, 99), 10, 99, .4)])() },
 ];
 const GR = () => GRADES[G.grade];
-const TYPE_NAME = { add: '加法', sub: '减法', mul: '乘法', div: '除法' };
+
 
 function slotCells(cells, slots, k, pending) {
   for (const s of slots) {
@@ -505,7 +545,7 @@ function slotCells(cells, slots, k, pending) {
 
 /* ================= 状態 ================= */
 const G = {
-  mode: 'idle', total: 6, grade: Math.min(GRADES.length - 1, +(localStorage.getItem('hisuan.grade') || 0)), sound: true, reduced: false,
+  mode: 'idle', total: 6, grade: Math.max(0, GRADES.findIndex(g => g.name === localStorage.getItem('hisuan.gradeName'))), sound: true, reduced: false,
   types: [], idx: -1, prob: null, k: 0, pending: null, locked: true, justSlot: -1,
   ok: 0, miss: 0, firstTry: 0, dopa: 0, combo: 0, lastUnit: 0, lastStamp: 0, level: 0,
   t0: 0, baseTime: 0, score: 0, exIdx: 0, exOk: 0, exMiss: 0, exEnd: 0,
@@ -795,7 +835,7 @@ function nextProblem() {
     $('#qno').textContent = 'EX ' + G.exIdx;
   } else return;
   G.prob.missed = false; G.k = 0; G.pending = null; G.justSlot = -1; G.locked = false;
-  $('#tag').textContent = (G.prob.oral ? '口算 · ' : '') + TYPE_NAME[G.prob.type];
+  $('#tag').textContent = G.prob.tagText || (G.prob.oral ? '口算 · ' : '') + TYPE_NAME[G.prob.type];
   renderProb(); fitProb(); renderHUD();
 }
 
@@ -953,12 +993,12 @@ function syncToggles() {
   app.classList.toggle('reduced', G.reduced);
 }
 function renderGrades() {
-  $('#grades').innerHTML = GRADES.map((g, i) => `<button data-g="${i}" class="${i === G.grade ? 'sel' : ''}">${g.name[0]}${g.name[3]}</button>`).join('');
+  $('#grades').innerHTML = GRADES.map((g, i) => `<button data-g="${i}" class="${i === G.grade ? 'sel' : ''}">${g.short || g.name[0] + g.name[3]}</button>`).join('');
   $('#gdesc').textContent = GR().name + '：' + GR().desc;
 }
 $('#grades').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
-  G.grade = +b.dataset.g; localStorage.setItem('hisuan.grade', G.grade); renderGrades(); SFX.tap();
+  G.grade = +b.dataset.g; localStorage.setItem('hisuan.gradeName', GR().name); renderGrades(); SFX.tap();
 });
 document.querySelectorAll('.counts button').forEach(b => b.addEventListener('click', () => {
   document.querySelectorAll('.counts button').forEach(x => x.classList.toggle('sel', x === b));
