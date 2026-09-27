@@ -442,6 +442,61 @@ const SFX = {
   tap() { if (this.on()) this.tone(880, 0.04, 'sine', 0.05); },
 };
 
+/* ================= 背景音乐（C–Am–F–G の4小節ループ。レベルが上がると楽器とテンポが増える） ================= */
+const BGM = {
+  timer: null, step: 0, next: 0,
+  MEL: [[7, null, 12, 7, 9, 7, 4, null], [9, null, 12, 9, 7, 4, 2, null], [5, 9, 12, 9, 7, 5, 4, 2], [7, null, 11, 14, 12, null, null, null]],
+  ROOT: [0, -3, -7, -5],
+  CHORD: [[0, 4, 7], [-3, 0, 4], [-7, -3, 0], [-5, -1, 2]],
+  start() {
+    const c = SFX.ctx; if (!c || this.timer) return;
+    if (!this.out) {
+      this.out = c.createGain(); this.out.gain.value = 0.8; this.out.connect(c.destination);
+      const len = c.sampleRate * 0.3, buf = c.createBuffer(1, len, c.sampleRate), ch = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) ch[i] = Math.random() * 2 - 1;
+      this.noiseBuf = buf;
+    }
+    this.step = 0; this.next = c.currentTime + 0.1;
+    this.timer = setInterval(() => this.tick(), 25);
+  },
+  stop() { clearInterval(this.timer); this.timer = null; },
+  tick() {
+    const c = SFX.ctx, ex = G.mode === 'ex';
+    const dur = 60 / (ex ? 168 : 112 + G.level * 6) / 4; // 16分音符の長さ
+    if (this.next < c.currentTime - 0.2) this.next = c.currentTime + 0.05; // タブが裏に回って遅れたら追いかけない
+    while (this.next < c.currentTime + 0.15) { if (G.sound) this.play(this.step, this.next, dur, ex); this.next += dur; this.step = (this.step + 1) % 64; }
+  },
+  play(s, t, dur, ex) {
+    const bar = s >> 4, i = s & 15, lv = ex ? 6 : G.level;
+    if (i % 4 === 0) this.note(130.81 * 2 ** (this.ROOT[bar] / 12), t, dur * 3.2, 'triangle', 0.13);
+    if (i % 2 === 0) {
+      const m = this.MEL[bar][i / 2];
+      if (m != null) { const f = 523.25 * 2 ** ((m + (ex ? 12 : 0)) / 12); this.note(f, t, dur * 1.8, 'triangle', 0.07); if (lv >= 1) this.note(f, t, dur * 1.2, 'square', 0.014); }
+    }
+    if (lv >= 2 && i % 2 === 0) this.noise(t, 0.035, 7000, i % 4 === 2 ? 0.05 : 0.025, 'highpass');
+    if (lv >= 3) { if (i % 8 === 0) this.kick(t); if (i % 8 === 4) this.noise(t, 0.12, 1800, 0.09, 'bandpass'); }
+    if (lv >= 4) { const ch = this.CHORD[bar]; this.note(261.63 * 2 ** ((ch[i % 3] + 12 * (i % 6 >= 3)) / 12), t, dur * 0.9, 'square', ex ? 0.02 : 0.013); }
+  },
+  note(f, t, d, type, v) {
+    const c = SFX.ctx, o = c.createOscillator(), g = c.createGain();
+    o.type = type; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(g).connect(this.out); o.start(t); o.stop(t + d + 0.02);
+  },
+  noise(t, d, f, v, type) {
+    const c = SFX.ctx, src = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain();
+    src.buffer = this.noiseBuf; fl.type = type; fl.frequency.value = f;
+    g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    src.connect(fl).connect(g).connect(this.out); src.start(t); src.stop(t + d + 0.02);
+  },
+  kick(t) {
+    const c = SFX.ctx, o = c.createOscillator(), g = c.createGain();
+    o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.12);
+    g.gain.setValueAtTime(0.35, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.15);
+    o.connect(g).connect(this.out); o.start(t); o.stop(t + 0.17);
+  },
+};
+
 /* ================= 粒子（canvas） ================= */
 const COLORS = ['#ff6fa8', '#3b6cf6', '#ffd23f', '#35c98e', '#b58cff', '#ff9f5a', '#5ad1ff'];
 const FX = {
@@ -564,6 +619,7 @@ function startBase() {
   $('#tLabel').textContent = '目标 ' + mmss(G.total * 12000);
   $('#timer').classList.remove('hurry');
   setDopa(0); show('game'); $('#result').classList.remove('show');
+  BGM.start();
   nextProblem();
 }
 
@@ -640,7 +696,7 @@ function completeProblem() {
 }
 
 function endBase() {
-  G.mode = 'result'; G.locked = true; G.baseTime = performance.now() - G.t0;
+  G.mode = 'result'; G.locked = true; G.baseTime = performance.now() - G.t0; BGM.stop();
   G.score = Math.round(100 * G.firstTry / G.total);
   const unlocked = G.score >= 80;
   const perfect = G.score === 100;
@@ -670,11 +726,12 @@ function startEX() {
   setLevel(6); app.classList.add('ex');
   $('#tLabel').textContent = '剩余';
   SFX.fanfare(); FX.rain(60);
+  BGM.start();
   nextProblem();
 }
 
 function exTimeUp() {
-  G.mode = 'result'; G.locked = true;
+  G.mode = 'result'; G.locked = true; BGM.stop();
   if (G.dopa > 0 && G.exOk >= 5) setDopa(INF); // フィーバーを完走したら嗨值は ∞
   banner('结束！');
   setTimeout(() => {
@@ -698,7 +755,7 @@ function exTimeUp() {
 }
 
 function toStart() {
-  G.mode = 'idle'; G.locked = true; setLevel(0); app.classList.remove('ex');
+  G.mode = 'idle'; G.locked = true; BGM.stop(); setLevel(0); app.classList.remove('ex');
   $('#result').classList.remove('show'); show('start');
 }
 
