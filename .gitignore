@@ -1,3 +1,5 @@
 # 参考動画（他人の作品なので commit しない）
 ref/
 .DS_Store
+# 動画用の録画（大きいので commit しない）
+rec/

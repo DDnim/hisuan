@@ -28,3 +28,12 @@
 - 可以用键盘的数字键、Backspace、Enter 操作。音效和音乐都用 WebAudio 现场合成，「声音」开关一起控制
 
 参考视频放在 `ref/`，不进 git。
+
+## 录制游戏画面（做视频用）
+
+```sh
+node tools/record-ex.js 三年级上   # 在无界面 Chrome 里自动玩到 EX，录下画面和声音 → rec/
+sh tools/mux-ex.sh                 # 以画面里的横幅为基准对齐音画 → rec/hisuan_ex.mp4（1080×1920，30fps）
+```
+
+需要 Chrome、ffmpeg 和 `puppeteer-core`（放在别处时用 `PUPPETEER=<路径>` 指定）。`rec/` 不进 git。
