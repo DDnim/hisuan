@@ -55,6 +55,9 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 .btn.primary{background:var(--blue);color:#fff}
 .btn.ghost{font-size:18px;padding:10px 18px;min-width:160px}
 .btn small{font-size:14px;margin-left:6px;opacity:.85}
+.subjs{display:flex;gap:8px}
+.subjs button{min-width:84px;border:3px solid var(--ink);border-radius:999px;padding:5px 14px;background:#fff;box-shadow:0 3px 0 var(--ink);font-size:16px;font-weight:900}
+.subjs button.sel{background:var(--blue);color:#fff}
 .toggles{display:flex;gap:8px}
 .toggles button{border:2px solid var(--ink);border-radius:999px;padding:6px 12px;background:#fff;font-weight:800;font-size:14px}
 .tip{font-size:12px;opacity:.55}
@@ -133,6 +136,17 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 .cell.pop{animation:cellpop .35s cubic-bezier(.3,1.8,.5,1)}
 @keyframes cellpop{0%{transform:scale(.3)}100%{transform:none}}
 .hint{text-align:center;font-weight:800;color:var(--blue);font-size:15px;min-height:20px}
+/* 英語の穴埋め */
+.cell.emo{font-size:min(calc(var(--cw)*1.7),96px)}
+.cell.blank{border-bottom:3px solid #c5c9d8;border-radius:0}
+.cell.zh{font-size:calc(var(--cw)*.44);font-weight:800;color:#6b7194}
+.cell.sentc{font-size:calc(var(--cw)*.62)}
+.sent{text-align:center;line-height:1.7;font-weight:900}
+.sent .cell.ans{display:inline-flex;vertical-align:middle;height:1.4em;padding:0 .3em;font-size:1em}
+.sent .cell.active{font-size:.8em}
+
+.pad.choice .key{height:clamp(56px,9vh,74px);font-size:32px}
+.pad.choice.words .key{font-size:21px;padding:0 4px}
 
 .pad{position:relative;z-index:2;display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:14px}
 .key{height:clamp(46px,7.4vh,62px);border:3px solid var(--ink);border-radius:14px;background:#fff;box-shadow:0 4px 0 var(--ink);font-size:26px;font-weight:900;transition:background-color .4s}
@@ -209,8 +223,9 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 
   <section id="start" class="screen show">
     <h1 class="logo"><span>嗨</span><span>算</span><span>！</span></h1>
-    <div class="sub">越算越嗨的算术练习</div>
+    <div class="sub" id="sub">越算越嗨的算术练习</div>
     <div class="mascot"></div>
+    <div class="subjs" id="subjs"><button data-s="math">数学</button><button data-s="en">英语</button></div>
     <div class="grades" id="grades"></div>
     <div class="gdesc" id="gdesc"></div>
     <div class="counts">
@@ -223,7 +238,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
       <button id="tSnd">♪ 声音：开</button>
       <button id="tMot">✦ 动效：全开</button>
     </div>
-    <p class="tip">也可以用键盘的数字键和 Backspace 操作</p>
+    <p class="tip" id="tip">也可以用键盘的数字键和 Backspace 操作</p>
   </section>
 
   <section id="game" class="screen">
@@ -533,14 +548,201 @@ const GRADES = [
         ? [() => longMulProblem(ri(101, 999), nz(11, 99)), () => vdiv(ri(11, 59), 2, 99, .4)]
         : [() => longMulProblem(ri(301, 999), nz(21, 99)), () => vdiv(ri(12, 99), 10, 99, .4)])() },
 ];
+
+/* ================= 英語の穴埋め（選択肢から選ぶ。人教版 PEP 三年级起点） ================= */
+const shuffle = arr => { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = ri(0, i); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const recent = [];
+function fresh(list) { // 同じ単語・文が続けて出ないようにする
+  let x, n = 0; do x = pick(list); while (recent.includes(x) && ++n < 30);
+  recent.push(x); if (recent.length > 12) recent.shift(); return x;
+}
+const VOW = 'aeiou';
+const CONF = { a: 'eo', b: 'dp', c: 'ks', d: 'bp', e: 'ai', f: 'tv', g: 'jq', h: 'nk', i: 'el', j: 'gi', k: 'ch', l: 'it', m: 'nw', n: 'mh', o: 'ua', p: 'qb', q: 'pg', r: 'ln', s: 'cz', t: 'fl', u: 'ov', v: 'wy', w: 'mv', x: 'zk', y: 'vu', z: 'sx' };
+// 正解の文字＋まぎらわしい文字で6択を作る（bad: 入れると別の単語になってしまう文字）
+function letterOpts(ans, bad = new Set(), near = []) {
+  const lo = ans.toLowerCase(), up = ans !== lo, out = [lo];
+  const pool = [...shuffle(near), ...shuffle([...CONF[lo], ...(VOW.includes(lo) ? VOW + 'y' : '')])];
+  for (const c of pool) if (out.length < 4 && !out.includes(c) && !bad.has(c)) out.push(c);
+  while (out.length < 6) { const c = String.fromCharCode(97 + ri(0, 25)); if (!out.includes(c) && !bad.has(c)) out.push(c); }
+  return shuffle(out.map(c => up ? c.toUpperCase() : c));
+}
+
+// 字母：アルファベット順に並べて抜けた文字を選ぶ（lv2 は大文字・小文字のペア）
+function abcProblem(lv) {
+  const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', pair = lv >= 2;
+  const s = ri(0, pair ? 23 : 21);
+  let items = [...A.slice(s, s + (pair ? 3 : 5))];
+  if (pair) items = items.flatMap(c => [c, c.toLowerCase()]); else if (lv === 1) items = items.map(c => c.toLowerCase());
+  const pos = shuffle([...items.keys()]).slice(0, lv ? 2 : 1).sort((a, b) => a - b);
+  const cpos = items.map((_, j) => pair ? j + (j >> 1) : j), cols = cpos[cpos.length - 1] + 1;
+  const colW = Array.from({ length: cols }, (_, c) => cpos.includes(c) ? 0.95 : 0.4);
+  const slots = pos.map((p, i) => {
+    const code = items[p].toLowerCase().charCodeAt(0);
+    const near = [-2, -1, 1, 2].map(d => String.fromCharCode(code + d)).filter(c => c >= 'a' && c <= 'z');
+    return { i, d: items[p], r: 0, c: cpos[p], p, opts: letterOpts(items[p], new Set(), near) };
+  });
+  return {
+    type: 'abc', choice: true, tagText: pair ? '字母 · 大小写' : '字母填空', cols, colW, slots, rows: [1.6],
+    say: [...new Set(items.map(c => c.toUpperCase()))].join(', '),
+    build(k, pending) {
+      const cells = [];
+      items.forEach((x, j) => { const s = slots.find(s => s.p === j); if (!s) cells.push({ r: 0, c: cpos[j], t: x }); else if (s.i > k) cells.push({ r: 0, c: cpos[j], cls: 'ans blank' }); });
+      slotCells(cells, slots, k, pending);
+      return cells;
+    },
+    hint(k) {
+      if (k >= slots.length) return items.join(' ');
+      if (!this.missed) return pair ? '大写和小写一对一对' : '按字母表的顺序填';
+      const s = slots[k], d = s.d;
+      if (pair) return s.p % 2 ? `${items[s.p - 1]} 的小写是？` : `${items[s.p + 1]} 的大写是？`;
+      const prev = String.fromCharCode(d.charCodeAt(0) - 1);
+      return /[a-z]/i.test(prev) ? `${prev} 后面是？` : `${String.fromCharCode(d.charCodeAt(0) + 1)} 前面是？`;
+    },
+  };
+}
+
+// 单词：絵と意味を見て、抜けた文字を左から選ぶ（1つ目はなるべく母音を抜く）
+function wordProblem([w, emo, zh], nBlank) {
+  const L = [...w], n = L.length, idx = [...L.keys()];
+  const first = shuffle(idx.filter(i => VOW.includes(L[i])))[0] ?? ri(0, n - 1);
+  const pos = [first, ...shuffle(idx.filter(i => i !== first))].slice(0, Math.max(1, Math.min(nBlank, n - 1))).sort((a, b) => a - b);
+  const slots = pos.map((p, i) => {
+    const bad = new Set([...'abcdefghijklmnopqrstuvwxyz'].filter(c => c !== L[p] && VOCAB.has(L.map((x, j) => j === p ? c : x).join(''))));
+    return { i, d: L[p], r: 1, c: p, opts: letterOpts(L[p], bad) };
+  });
+  return {
+    type: 'word', choice: true, tagText: '单词填空', cols: n, colW: L.map(() => 0.9), slots, rows: [2.2, 1.3], say: w,
+    build(k, pending) {
+      const cells = [{ r: 0, c: 0, span: n, t: emo, cls: 'emo' }];
+      L.forEach((x, j) => { const s = slots.find(s => s.c === j); if (!s) cells.push({ r: 1, c: j, t: x }); else if (s.i > k) cells.push({ r: 1, c: j, cls: 'ans blank' }); });
+      slotCells(cells, slots, k, pending);
+      return cells;
+    },
+    hint(k) { return k >= slots.length ? `${w}　${zh}` : zh; },
+  };
+}
+
+// 句子：文の空所に入る語を選ぶ。データは「英文（{正解/誤答/…}）|中文|ヒント」
+function sentProblem(line) {
+  const [s, zh, tip] = line.split('|'), m = s.match(/^(.*)\{([^}]+)\}(.*)$/), opts = m[2].split('/');
+  const slots = [{ i: 0, d: opts[0], r: 1, c: 0, opts: shuffle(opts) }];
+  const em = Math.max(...opts.map(o => o.length)) * 0.6 + 0.6;
+  return {
+    type: 'sent', choice: true, tagText: '句子填空', cols: 1, colW: [8], rows: [0.9, 2.8], slots, say: m[1] + opts[0] + m[3],
+    build(k, pending) {
+      const st = slotState(slots[0], k, pending);
+      return [{ r: 0, c: 0, t: zh, cls: 'zh' },
+        { r: 1, c: 0, cls: 'sentc', t: `<div class="sent">${m[1]}<span class="cell ${st.cls}" data-slot="0" style="min-width:${em}em">${st.t}</span>${m[3]}</div>` }];
+    },
+    hint(k) { return k >= slots.length || this.missed ? tip : '选出正确的词'; },
+  };
+}
+
+const W3 = [['red', '🔴', '红色'], ['blue', '🔵', '蓝色'], ['green', '🟢', '绿色'], ['yellow', '🟡', '黄色'], ['black', '⚫', '黑色'], ['white', '⚪', '白色'], ['brown', '🟤', '棕色'], ['orange', '🍊', '橙子'],
+  ['cat', '🐱', '猫'], ['dog', '🐶', '狗'], ['pig', '🐷', '猪'], ['duck', '🦆', '鸭子'], ['bear', '🐻', '熊'], ['bird', '🐦', '鸟'], ['panda', '🐼', '熊猫'], ['tiger', '🐯', '老虎'], ['monkey', '🐵', '猴子'], ['rabbit', '🐰', '兔子'], ['fish', '🐟', '鱼'],
+  ['eye', '👁️', '眼睛'], ['ear', '👂', '耳朵'], ['nose', '👃', '鼻子'], ['mouth', '👄', '嘴'], ['hand', '✋', '手'], ['foot', '🦶', '脚'], ['leg', '🦵', '腿'], ['arm', '💪', '胳膊'],
+  ['apple', '🍎', '苹果'], ['pear', '🍐', '梨'], ['banana', '🍌', '香蕉'], ['grape', '🍇', '葡萄'], ['peach', '🍑', '桃子'], ['egg', '🥚', '鸡蛋'], ['milk', '🥛', '牛奶'], ['bread', '🍞', '面包'], ['cake', '🍰', '蛋糕'], ['juice', '🧃', '果汁'],
+  ['pen', '🖊️', '钢笔'], ['pencil', '✏️', '铅笔'], ['ruler', '📏', '尺子'], ['book', '📖', '书'], ['bag', '🎒', '书包'], ['crayon', '🖍️', '蜡笔'],
+  ['one', '1️⃣', '一'], ['two', '2️⃣', '二'], ['three', '3️⃣', '三'], ['four', '4️⃣', '四'], ['five', '5️⃣', '五'], ['six', '6️⃣', '六'], ['seven', '7️⃣', '七'], ['eight', '8️⃣', '八'], ['nine', '9️⃣', '九'], ['ten', '🔟', '十'],
+  ['boy', '👦', '男孩'], ['girl', '👧', '女孩'], ['baby', '👶', '婴儿'], ['ball', '⚽', '球'], ['car', '🚗', '小汽车'], ['kite', '🪁', '风筝'], ['boat', '⛵', '小船']];
+const W4 = [['door', '🚪', '门'], ['window', '🪟', '窗户'], ['computer', '💻', '电脑'], ['light', '💡', '灯'], ['clock', '⏰', '钟'], ['chair', '🪑', '椅子'], ['bed', '🛏️', '床'], ['sofa', '🛋️', '沙发'], ['phone', '📱', '电话'], ['key', '🔑', '钥匙'], ['box', '📦', '盒子'],
+  ['rice', '🍚', '米饭'], ['beef', '🥩', '牛肉'], ['soup', '🍲', '汤'], ['noodles', '🍜', '面条'], ['chicken', '🍗', '鸡肉'], ['carrot', '🥕', '胡萝卜'], ['tomato', '🍅', '西红柿'], ['potato', '🥔', '土豆'], ['onion', '🧅', '洋葱'],
+  ['hat', '👒', '帽子'], ['shirt', '👕', '衬衫'], ['dress', '👗', '连衣裙'], ['shoes', '👟', '鞋'], ['socks', '🧦', '袜子'], ['coat', '🧥', '外套'], ['gloves', '🧤', '手套'], ['scarf', '🧣', '围巾'], ['jeans', '👖', '牛仔裤'],
+  ['sunny', '☀️', '晴朗的'], ['rainy', '🌧️', '下雨的'], ['cloudy', '☁️', '多云的'], ['snowy', '❄️', '下雪的'], ['windy', '🌬️', '有风的'], ['hot', '🥵', '热的'], ['cold', '🥶', '冷的'],
+  ['horse', '🐴', '马'], ['cow', '🐮', '奶牛'], ['sheep', '🐑', '绵羊'], ['hen', '🐔', '母鸡'], ['goat', '🐐', '山羊'],
+  ['doctor', '🩺', '医生'], ['farmer', '🚜', '农民'], ['cook', '🍳', '厨师'], ['driver', '🚕', '司机']];
+const W5 = [['hamburger', '🍔', '汉堡包'], ['sandwich', '🥪', '三明治'], ['salad', '🥗', '沙拉'], ['tea', '🍵', '茶'], ['robot', '🤖', '机器人'], ['flower', '🌸', '花'], ['tree', '🌳', '树'], ['river', '🏞️', '河流'],
+  ['mountain', '⛰️', '山'], ['bridge', '🌉', '桥'], ['house', '🏠', '房子'], ['grass', '🌿', '草'], ['photo', '📷', '照片'], ['dance', '💃', '跳舞'], ['sing', '🎤', '唱歌'], ['swim', '🏊', '游泳'], ['draw', '🎨', '画画'],
+  ['spring', '🌱', '春天'], ['summer', '🏖️', '夏天'], ['autumn', '🍂', '秋天'], ['winter', '⛄', '冬天'], ['birthday', '🎂', '生日'], ['music', '🎵', '音乐'], ['picnic', '🧺', '野餐']];
+const W6 = [['bike', '🚲', '自行车'], ['bus', '🚌', '公共汽车'], ['train', '🚆', '火车'], ['plane', '✈️', '飞机'], ['ship', '🚢', '轮船'], ['subway', '🚇', '地铁'], ['hospital', '🏥', '医院'], ['cinema', '🎬', '电影院'],
+  ['museum', '🏛️', '博物馆'], ['library', '📚', '图书馆'], ['science', '🔬', '科学'], ['tall', '🦒', '高的'], ['happy', '😊', '高兴的'], ['angry', '😠', '生气的'], ['afraid', '😨', '害怕的'], ['tired', '😴', '累的'],
+  ['sad', '😢', '难过的'], ['moon', '🌙', '月亮'], ['star', '⭐', '星星'], ['ticket', '🎫', '票'], ['football', '🏈', '足球'], ['hiking', '🥾', '远足']];
+const VOCAB = new Set([...W3, ...W4, ...W5, ...W6].map(x => x[0]));
+const S4 = [
+  'I {am/is/are} a student.|我是一名学生。|I 后面用 am',
+  'She {is/am/are} my mother.|她是我的妈妈。|he / she / it 后面用 is',
+  'They {are/is/am} my friends.|他们是我的朋友。|they / we / you 后面用 are',
+  '{Are/Is/Am} you a teacher?|你是老师吗？|you 用 are',
+  '{Is/Are/Am} it a dog?|它是一只狗吗？|it 用 is',
+  'This is {an/a} apple.|这是一个苹果。|apple 以元音开头，前面用 an',
+  'It is {a/an} cat.|它是一只猫。|cat 以辅音开头，前面用 a',
+  'I have {an/a} egg.|我有一个鸡蛋。|egg 以元音开头，前面用 an',
+  '{These/This} are my books.|这些是我的书。|are + 复数 books，用 These',
+  '{This/These} is my bag.|这是我的书包。|is + 单数，用 This',
+  'This is {my/I/me} dog.|这是我的狗。|“我的”是 my',
+  'The book is {on/in/under} the desk.|书在桌子上。|“在……上面”用 on',
+  'The ball is {in/on/under} the box.|球在盒子里。|“在……里面”用 in',
+  'The cat is {under/on/in} the chair.|猫在椅子下面。|“在……下面”用 under',
+  '{What/Where/Who} is it? It is a pen.|它是什么？它是一支钢笔。|问“什么”用 What',
+  '{Where/What/Who} is my pen?|我的钢笔在哪儿？|问“在哪儿”用 Where',
+  '{Who/What/Where} is she? She is my sister.|她是谁？她是我的姐姐。|问“谁”用 Who',
+  'How many {cats/cat} do you have?|你有几只猫？|How many 后面用复数',
+  'It is {cold/hot/warm} in winter.|冬天很冷。|“冷的”是 cold',
+  'I like {apples/apple}.|我喜欢苹果。|泛指喜欢某种东西，用复数 apples',
+];
+const S5 = [
+  'There {is/are} a bed in my room.|我的房间里有一张床。|a bed 是单数，用 There is',
+  'There {are/is} two trees near the house.|房子附近有两棵树。|two trees 是复数，用 There are',
+  'There {are/is} some apples on the table.|桌子上有一些苹果。|apples 是复数，用 There are',
+  'I {can/cans/am} swim.|我会游泳。|can 后面直接跟动词，can 本身不变',
+  'She can {dance/dances/dancing}.|她会跳舞。|can 后面用动词原形',
+  '{Can/Do/Is} you cook? Yes, I can.|你会做饭吗？是的，我会。|用 can 回答，就用 can 提问',
+  'He {likes/like/liking} fish.|他喜欢鱼。|he / she 后面的动词加 s',
+  'I {like/likes/liking} noodles.|我喜欢面条。|I 后面用动词原形',
+  '{Does/Do/Is} she like salad?|她喜欢沙拉吗？|she 作主语，用 Does 提问',
+  '{Do/Does/Are} you like tea?|你喜欢茶吗？|you 作主语，用 Do 提问',
+  'I often {play/plays/playing} football on the weekend.|我周末经常踢足球。|I 后面用动词原形',
+  'We have English {on/in/at} Monday.|我们星期一上英语课。|星期几前面用 on',
+  "I get up {at/on/in} 7 o'clock.|我七点起床。|几点钟前面用 at",
+  'My birthday is {in/on/at} May.|我的生日在五月。|月份前面用 in',
+  'The cat is {in front of/behind/under} the box.|猫在盒子前面。|“在……前面”是 in front of',
+  'What would you like {to/for/of} eat?|你想吃什么？|would like to + 动词',
+  'What {is/are} your favourite food?|你最喜欢的食物是什么？|food 是单数，用 is',
+  '{What/When/Where} do you do on the weekend?|你周末做什么？|问“做什么”用 What',
+  '{When/Where/Who} is your birthday?|你的生日在什么时候？|问“什么时候”用 When',
+];
+const S6 = [
+  'I {went/go/goes} to the zoo yesterday.|我昨天去了动物园。|yesterday 用过去式，go → went',
+  'She {watched/watches/watch} TV last night.|她昨晚看了电视。|last night 用过去式，watch 加 ed',
+  'We {played/play/plays} football last weekend.|我们上周末踢了足球。|last weekend 用过去式',
+  'He {saw/see/seed} a film last night.|他昨晚看了一场电影。|see 的过去式是 saw',
+  'I {bought/buyed/buy} a new hat yesterday.|我昨天买了一顶新帽子。|buy 的过去式是 bought',
+  '{Did/Do/Does} you go to the park yesterday?|你昨天去公园了吗？|问过去的事用 Did',
+  'I {was/am/were} ill yesterday.|我昨天生病了。|I / he / she 的过去式用 was',
+  'They {were/was/are} at home last Sunday.|他们上周日在家。|they / we / you 的过去式用 were',
+  'I am {reading/read/reads} a book now.|我现在正在读书。|正在做：be + 动词ing',
+  'Look! The boys {are/is/am} running.|看！男孩们正在跑。|boys 是复数，用 are',
+  'He is {swimming/swiming/swims} now.|他现在正在游泳。|swim 双写 m 再加 ing',
+  'I am going to {visit/visiting/visited} my grandparents tomorrow.|我明天要去看望祖父母。|be going to + 动词原形',
+  'What are you going to do {tomorrow/yesterday/last week}?|你明天打算做什么？|be going to 说的是将来',
+  'I am {taller/tall/tallest} than you.|我比你高。|有 than，用比较级 taller',
+  'My bag is {bigger/biger/big} than yours.|我的书包比你的大。|big → bigger，双写 g',
+  'Mike is {older/old/olds} than me.|迈克比我年龄大。|有 than，用比较级 older',
+  'An elephant is {heavier/heavy/heavyer} than a tiger.|大象比老虎重。|heavy 变 y 为 i 再加 er',
+  'How {do/does/is} you go to school? I go by bike.|你怎么去上学？我骑自行车。|you 作主语，用 do',
+  'He {goes/go/going} to school on foot.|他步行去上学。|he 后面 go → goes',
+  "She {doesn't/don't/isn't} like apples.|她不喜欢苹果。|she 的否定用 doesn't + 动词原形",
+];
+const wp = (list, n) => wordProblem(fresh(list), n), sp = list => sentProblem(fresh(list));
+GRADES.push(
+  { subj: 'en', name: '英语 · 字母', short: '字母', desc: '按顺序补全字母、大小写配对', sec: 6, gen: lv => abcProblem(lv) },
+  { subj: 'en', name: '英语 · 三年级', short: '三年级', desc: '颜色、动物、身体、食物、数字的单词', sec: 8, gen: lv => wp(W3, lv + 1) },
+  { subj: 'en', name: '英语 · 四年级', short: '四年级', desc: '房间、食物、衣服、天气的单词，be 动词、a / an', sec: 10,
+    gen: lv => pick(lv === 0 ? [() => wp(W4, 1), () => wp(W3, 2), () => sp(S4)] : [() => wp(W4, lv + 1), () => sp(S4)])() },
+  { subj: 'en', name: '英语 · 五年级', short: '五年级', desc: 'There be、can、一般现在时、介词', sec: 12,
+    gen: lv => pick([() => wp(W5, lv + 1), () => sp(S5), () => sp(S5)])() },
+  { subj: 'en', name: '英语 · 六年级', short: '六年级', desc: '一般过去时、现在进行时、将来时、比较级', sec: 14,
+    gen: lv => pick([() => wp(W6, lv + 1), () => sp(S6), () => sp(S6)])() },
+);
 const GR = () => GRADES[G.grade];
 
 
+function slotState(s, k, pending) {
+  if (s.i < k) return { t: s.d, cls: 'ans' + (s.i === G.justSlot ? ' pop' : '') };
+  if (s.i === k) return { t: pending ?? '?', cls: 'ans ' + (pending != null ? 'wrongd' : 'active') };
+}
 function slotCells(cells, slots, k, pending) {
-  for (const s of slots) {
-    if (s.i < k) cells.push({ r: s.r, c: s.c, t: s.d, cls: 'ans' + (s.i === G.justSlot ? ' pop' : ''), slot: s.i });
-    else if (s.i === k) cells.push({ r: s.r, c: s.c, t: pending ?? '?', cls: 'ans ' + (pending != null ? 'wrongd' : 'active'), slot: s.i });
-  }
+  for (const s of slots) { const st = slotState(s, k, pending); if (st) cells.push({ r: s.r, c: s.c, ...st, slot: s.i }); }
 }
 
 /* ================= 状態 ================= */
@@ -773,8 +975,27 @@ function buildStatic() {
   $('.friends').innerHTML = [[4, 0], [20, 1], [66, 2], [82, 3]].map(([l, c]) => `<div class="f" style="left:${l}%">${catSVG(FRIEND_COLORS[c])}</div>`).join('');
   let tri = ''; for (let i = 0; i < 16; i++) tri += `<path d="M${i * 27.5 + 2} 6 L${i * 27.5 + 25.5} 6 L${i * 27.5 + 13.75} 30Z" fill="${COLORS[i % COLORS.length]}" stroke="#232a4d" stroke-width="2"/>`;
   $('.bunting').innerHTML = `<path d="M0 4 Q220 12 440 4" stroke="#232a4d" stroke-width="3" fill="none"/>` + tri;
-  $('#pad').innerHTML = [7, 8, 9, 4, 5, 6, 1, 2, 3].map(n => `<button class="key" data-k="${n}">${n}</button>`).join('')
-    + `<button class="key del" data-k="del">⌫</button><button class="key zero" data-k="0">0</button>`;
+  renderPad();
+}
+// 数字キー、または英語の問題では今のマスの選択肢を並べる（ボタンは使い回して文字だけ替える）
+function renderPad() {
+  const pad = $('#pad'), p = G.prob, s = p?.choice && p.slots[G.k];
+  if (p?.choice && !s) return; // 最後まで答えたら前の選択肢のまま
+  const words = s && s.opts.some(o => o.length > 1);
+  const mode = s ? (words ? 'w' : 'l') + s.opts.length : 'num';
+  if (pad.dataset.mode !== mode) {
+    pad.dataset.mode = mode;
+    pad.className = 'pad' + (s ? ' choice' + (words ? ' words' : '') : '');
+    pad.style.gridTemplateColumns = s ? `repeat(${words ? (s.opts.length === 4 ? 2 : s.opts.length) : 3},1fr)` : '';
+    pad.innerHTML = s ? s.opts.map(() => '<button class="key"></button>').join('')
+      : [7, 8, 9, 4, 5, 6, 1, 2, 3].map(n => `<button class="key" data-k="${n}">${n}</button>`).join('')
+        + `<button class="key del" data-k="del">⌫</button><button class="key zero" data-k="0">0</button>`;
+  }
+  if (s) pad.querySelectorAll('.key').forEach((b, i) => { b.dataset.k = s.opts[i]; b.textContent = s.opts[i]; });
+}
+function say(text) { // 答え終わったら英語を読み上げる
+  if (!G.sound || !window.speechSynthesis) return;
+  try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'en-US'; u.rate = 0.85; speechSynthesis.speak(u); } catch (e) {}
 }
 
 /* ================= 描画 ================= */
@@ -798,6 +1019,7 @@ function renderProb() {
   prob.innerHTML = p.build(G.k, G.pending).map(c =>
     `<div class="cell ${c.cls || ''}" style="grid-row:${c.r + 1};grid-column:${c.c + 1}${c.span ? ' / span ' + c.span : ''}"${c.slot != null ? ` data-slot="${c.slot}"` : ''}>${c.t ?? ''}</div>`).join('');
   $('#hint').textContent = p.hint(G.k);
+  renderPad();
 }
 function fitProb() {
   if (!G.prob) return;
@@ -853,10 +1075,10 @@ function input(key, src) {
   const slot = G.prob.slots[G.k], ex = G.mode === 'ex';
   clearTimeout(input.t);
   if (key === slot.d) {
+    src ||= document.querySelector(`.key[data-k="${CSS.escape(String(key))}"]`); // 選択肢は答えると替わるので先に探す
     G.pending = null; G.justSlot = G.k; G.k++; G.combo++;
     renderProb();
     const cell = document.querySelector(`[data-slot="${slot.i}"]`), { x, y } = local(cell);
-    src ||= document.querySelector(`.key[data-k="${key}"]`);
     if (src) { replay(src, 'hit'); const k = local(src); FX.beam(k.x, k.y, x, y); }
     renderCombo();
     const mult = ex ? 8 + G.combo * 2 : 1.6 + G.combo * 0.25;
@@ -907,6 +1129,7 @@ function completeProblem() {
   if (G.level >= 3) flash();
   if (G.level >= 3) shake();
   SFX.complete(G.level);
+  if (G.prob.say) say(G.prob.say);
   face('happy', 900);
   setTimeout(nextProblem, G.reduced ? 450 : 750);
 }
@@ -992,13 +1215,29 @@ function syncToggles() {
   $('#tMot').textContent = '✦ 动效：' + (G.reduced ? '减弱' : '全开');
   app.classList.toggle('reduced', G.reduced);
 }
+const SUBJ = {
+  math: { sub: '越算越嗨的算术练习', tip: '也可以用键盘的数字键和 Backspace 操作' },
+  en: { sub: '越填越嗨的英语填空', tip: '也可以用键盘的字母键，或数字键 1–6 选择' },
+};
+const subjOf = g => g.subj || 'math';
 function renderGrades() {
-  $('#grades').innerHTML = GRADES.map((g, i) => `<button data-g="${i}" class="${i === G.grade ? 'sel' : ''}">${g.short || g.name[0] + g.name[3]}</button>`).join('');
+  const sj = subjOf(GR());
+  document.querySelectorAll('#subjs button').forEach(b => b.classList.toggle('sel', b.dataset.s === sj));
+  $('#grades').innerHTML = GRADES.map((g, i) => subjOf(g) !== sj ? '' : `<button data-g="${i}" class="${i === G.grade ? 'sel' : ''}">${g.short || g.name[0] + g.name[3]}</button>`).join('');
   $('#gdesc').textContent = GR().name + '：' + GR().desc;
+  $('#sub').textContent = SUBJ[sj].sub; $('#tip').textContent = SUBJ[sj].tip;
+}
+function setGrade(i) {
+  G.grade = i; localStorage.setItem('hisuan.gradeName', GR().name); localStorage.setItem('hisuan.gradeName.' + subjOf(GR()), GR().name); renderGrades();
 }
 $('#grades').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
-  G.grade = +b.dataset.g; localStorage.setItem('hisuan.gradeName', GR().name); renderGrades(); SFX.tap();
+  setGrade(+b.dataset.g); SFX.tap();
+});
+$('#subjs').addEventListener('click', e => {
+  const sj = e.target.closest('button')?.dataset.s; if (!sj || sj === subjOf(GR())) return;
+  const last = GRADES.findIndex(g => g.name === localStorage.getItem('hisuan.gradeName.' + sj));
+  setGrade(last >= 0 ? last : GRADES.findIndex(g => subjOf(g) === sj)); SFX.tap();
 });
 document.querySelectorAll('.counts button').forEach(b => b.addEventListener('click', () => {
   document.querySelectorAll('.counts button').forEach(x => x.classList.toggle('sel', x === b));
@@ -1011,14 +1250,19 @@ $('#tMot').addEventListener('click', () => { G.reduced = !G.reduced; syncToggles
 $('#pad').addEventListener('pointerdown', e => {
   const b = e.target.closest('.key'); if (!b) return;
   e.preventDefault(); SFX.on();
-  input(b.dataset.k === 'del' ? 'del' : +b.dataset.k, b);
+  input(b.dataset.k === 'del' ? 'del' : G.prob?.choice ? b.dataset.k : +b.dataset.k, b);
 });
 $('#panel').addEventListener('click', e => {
   const id = e.target.closest('button')?.id;
   if (id === 'toEx') startEX(); else if (id === 'again') startBase(); else if (id === 'toStart') toStart();
 });
 addEventListener('keydown', e => {
-  if (/^[0-9]$/.test(e.key)) { SFX.on(); input(+e.key); }
+  const s = G.prob?.choice && !G.locked && G.prob.slots[G.k];
+  if (s && /^[1-9a-z]$/i.test(e.key)) { // 英語：数字キーは選択肢の番号、字母キーはその文字
+    const k = /\d/.test(e.key) ? s.opts[e.key - 1] : s.opts.find(o => o.toLowerCase() === e.key.toLowerCase()) ?? (s.d.length === 1 ? e.key : null);
+    if (k != null) { SFX.on(); input(k); }
+  }
+  else if (/^[0-9]$/.test(e.key)) { SFX.on(); input(+e.key); }
   else if (e.key === 'Backspace') input('del');
   else if (e.key === 'Enter') {
     if ($('#start').classList.contains('show')) { SFX.on(); startBase(); }
