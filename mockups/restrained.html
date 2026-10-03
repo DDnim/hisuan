@@ -1,0 +1,113 @@
+<!doctype html><meta charset="utf-8"><style>
+:root{--ink:#232a4d;--line:#e5e7ef;--mute:#9aa0b8;--ok:#3cb371;--okbg:#e6f6ec;--ng:#e5484d;--ngbg:#fdecec;--acc:#ffc61a}
+*{box-sizing:border-box;margin:0}
+body{background:#d8dbe6;font-family:"PingFang SC","Hiragino Sans GB",sans-serif;color:var(--ink);display:flex;gap:28px;padding:28px;align-items:flex-start}
+.ph{width:390px;height:844px;background:#fff;border-radius:36px;overflow:hidden;position:relative;display:flex;flex-direction:column}
+.cap{position:absolute;top:-24px;left:8px;font-size:15px;color:#555}
+.wrap{position:relative;padding-top:24px}
+.top{display:flex;align-items:center;gap:12px;padding:18px 20px 8px}
+.x{font-size:22px;color:var(--mute)}
+.bar{flex:1;height:14px;background:var(--line);border-radius:8px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--acc);border-radius:8px}
+.streak{font-weight:800;font-size:16px;color:#f08c00}
+.hi{display:flex;justify-content:space-between;padding:4px 22px 0;font-size:14px;color:var(--mute)}
+.hi b{color:var(--ink);font-size:18px;font-variant-numeric:tabular-nums}
+.q{padding:18px 22px 0;font-size:20px;font-weight:700}
+.cat{width:64px;height:58px}
+.row{display:flex;align-items:center;gap:10px;padding:10px 22px 0}
+.bub{border:2px solid var(--line);border-radius:14px;padding:8px 12px;font-size:15px}
+.calc{margin:22px auto 0;font-family:"SF Mono",Menlo,monospace;font-size:44px;font-weight:600;line-height:1.25;text-align:right;width:220px}
+.calc .op{float:left}.calc hr{border:0;border-top:3px solid var(--ink);margin:4px 0}
+.cell{display:inline-block;width:34px;height:52px;border:2.5px solid var(--line);border-radius:10px;vertical-align:middle;margin-left:3px;text-align:center;line-height:48px;font-size:36px}
+.cell.cur{border-color:var(--acc);background:#fff8e1}
+.cell.ok{border-color:var(--ok);color:var(--ok)}
+.small{font-size:16px;color:var(--mute);height:18px;line-height:18px;letter-spacing:22px;padding-right:0}
+.pad{margin-top:auto;padding:0 20px 22px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.k{height:58px;border:2px solid var(--line);border-bottom-width:5px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700}
+.k.w{grid-column:span 2}
+.fb{position:absolute;left:0;right:0;bottom:0;padding:20px 22px 26px;border-radius:0}
+.fb.ok{background:var(--okbg);color:#1f7a4a}.fb.ng{background:var(--ngbg);color:#b42318}
+.fb h3{font-size:22px;display:flex;align-items:center;gap:10px}
+.fb p{font-size:15px;margin-top:6px}
+.btn{margin-top:14px;height:52px;border-radius:14px;color:#fff;font-size:18px;font-weight:800;display:flex;align-items:center;justify-content:center;border-bottom:4px solid rgba(0,0,0,.18)}
+.fb.ok .btn{background:var(--ok)}.fb.ng .btn{background:var(--ng)}
+.plus{color:var(--ok);font-weight:800;font-size:14px;margin-left:6px}
+.wm{position:absolute;right:16px;top:30px;font:12px "SF Mono",monospace;color:#c3c7d6}
+.center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:0 30px;text-align:center}
+.big{font-size:56px;font-weight:900;font-variant-numeric:tabular-nums}
+.stats{display:flex;gap:10px;width:100%}
+.st{flex:1;border:2px solid var(--line);border-radius:14px;padding:10px 0}
+.st small{display:block;font-size:12px;color:var(--mute)}.st b{font-size:20px}
+.ne .e-h,.ne .e-s,.ne .m-o,.ne .sweat{display:none}.ha .e-n,.ha .e-s,.ha .m-n,.ha .sweat{display:none}
+.g{display:grid;grid-template-columns:repeat(5,44px);justify-content:center;margin-top:26px;font-family:"SF Mono",Menlo,monospace;font-size:44px;font-weight:600;row-gap:4px}
+.g>span{text-align:center;height:56px;line-height:56px}.g .bm{font-size:16px;color:var(--mute);height:18px;line-height:18px}
+.g .x2{text-decoration:line-through;color:var(--mute)}.g .ln{grid-column:1/-1;height:3px;background:var(--ink);margin:2px 0}
+.g .cell{width:40px;height:54px;margin:0 auto;line-height:50px;font-size:36px;display:block}
+</style><div class="wrap"><div class="cap">① 答题中：白底、只有一只猫、一个高亮格</div><div class="ph"><div class="top"><span class="x">✕</span><div class="bar"><i style="width:40%"></i></div><span class="streak">🔥 4</span></div>
+<div class="hi"><span>三年级上 · 第 4/10 题</span><span>嗨值 <b>3.2 亿</b></span></div>
+<div class="row"><div class="ne"><svg class="cat" viewBox="0 0 120 110" style="--c:${color}">
+  <g stroke="#232a4d" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+    <rect x="36" y="78" width="48" height="28" rx="14" fill="#ff9ec4"/>
+    <path d="M20 44 L27 6 L52 26 Z" fill="#ff9ec4"/><path d="M100 44 L93 6 L68 26 Z" fill="#ff9ec4"/>
+    <ellipse cx="60" cy="52" rx="44" ry="34" fill="#ff9ec4"/>
+  </g>
+  <path d="M28 16 L31 32 L42 24Z" fill="#fff" opacity=".5"/><path d="M92 16 L89 32 L78 24Z" fill="#fff" opacity=".5"/>
+  <ellipse cx="30" cy="62" rx="8" ry="5" fill="#ff5c9a" opacity=".45"/><ellipse cx="90" cy="62" rx="8" ry="5" fill="#ff5c9a" opacity=".45"/>
+  <g fill="#232a4d" class="e-n"><ellipse cx="44" cy="50" rx="5.5" ry="7.5"/><ellipse cx="76" cy="50" rx="5.5" ry="7.5"/>
+    <circle cx="46" cy="47" r="2.2" fill="#fff"/><circle cx="78" cy="47" r="2.2" fill="#fff"/></g>
+  <g fill="none" stroke="#232a4d" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path class="e-h" d="M37 53 Q44 42 51 53 M69 53 Q76 42 83 53"/>
+    <path class="e-s" d="M38 44 L50 50 L38 56 M82 44 L70 50 L82 56"/>
+    <path class="m-n" d="M52 62 Q56 67 60 62 Q64 67 68 62"/>
+    <path d="M14 58 L2 55 M14 64 L3 66 M106 58 L118 55 M106 64 L117 66" stroke-width="3"/>
+  </g>
+  <path class="m-o" d="M50 61 Q60 80 70 61 Z" fill="#e0306f" stroke="#232a4d" stroke-width="4" stroke-linejoin="round"/>
+  <path class="sweat" d="M100 22 q7 10 0 15 q-7 -5 0 -15Z" fill="#7cc8ff" stroke="#232a4d" stroke-width="2.5"/>
+</svg></div><div class="bub">十位不够减，向百位借 1</div></div>
+<div class="g"><span></span><span class="bm"></span><span class="bm">8</span><span class="bm">9</span><span class="bm">13</span><span></span><span>4</span><span class="x2">9</span><span class="x2">0</span><span class="x2">3</span><span>−</span><span>1</span><span>4</span><span>7</span><span>4</span><span class="ln"></span><span></span><span class="cell"></span><span class="cell cur"></span><span class="cell ok">2</span><span class="cell ok">9</span></div>
+<div class="pad"><div class="k">7</div><div class="k">8</div><div class="k">9</div><div class="k">4</div><div class="k">5</div><div class="k">6</div><div class="k">1</div><div class="k">2</div><div class="k">3</div><div class="k">⌫</div><div class="k w">0</div></div></div></div><div class="wrap"><div class="cap">② 答对：底部绿条＋嗨值跳一下，没有彩纸屑</div><div class="ph"><div class="top"><span class="x">✕</span><div class="bar"><i style="width:50%"></i></div><span class="streak">🔥 5</span></div>
+<div class="hi"><span>三年级上 · 第 5/10 题</span><span>嗨值 <b>4.8 亿</b><span class="plus">+1.6亿</span></span></div>
+<div class="row"><div class="ha"><svg class="cat" viewBox="0 0 120 110" style="--c:${color}">
+  <g stroke="#232a4d" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+    <rect x="36" y="78" width="48" height="28" rx="14" fill="#ff9ec4"/>
+    <path d="M20 44 L27 6 L52 26 Z" fill="#ff9ec4"/><path d="M100 44 L93 6 L68 26 Z" fill="#ff9ec4"/>
+    <ellipse cx="60" cy="52" rx="44" ry="34" fill="#ff9ec4"/>
+  </g>
+  <path d="M28 16 L31 32 L42 24Z" fill="#fff" opacity=".5"/><path d="M92 16 L89 32 L78 24Z" fill="#fff" opacity=".5"/>
+  <ellipse cx="30" cy="62" rx="8" ry="5" fill="#ff5c9a" opacity=".45"/><ellipse cx="90" cy="62" rx="8" ry="5" fill="#ff5c9a" opacity=".45"/>
+  <g fill="#232a4d" class="e-n"><ellipse cx="44" cy="50" rx="5.5" ry="7.5"/><ellipse cx="76" cy="50" rx="5.5" ry="7.5"/>
+    <circle cx="46" cy="47" r="2.2" fill="#fff"/><circle cx="78" cy="47" r="2.2" fill="#fff"/></g>
+  <g fill="none" stroke="#232a4d" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path class="e-h" d="M37 53 Q44 42 51 53 M69 53 Q76 42 83 53"/>
+    <path class="e-s" d="M38 44 L50 50 L38 56 M82 44 L70 50 L82 56"/>
+    <path class="m-n" d="M52 62 Q56 67 60 62 Q64 67 68 62"/>
+    <path d="M14 58 L2 55 M14 64 L3 66 M106 58 L118 55 M106 64 L117 66" stroke-width="3"/>
+  </g>
+  <path class="m-o" d="M50 61 Q60 80 70 61 Z" fill="#e0306f" stroke="#232a4d" stroke-width="4" stroke-linejoin="round"/>
+  <path class="sweat" d="M100 22 q7 10 0 15 q-7 -5 0 -15Z" fill="#7cc8ff" stroke="#232a4d" stroke-width="2.5"/>
+</svg></div><div class="bub">5 连对！</div></div>
+<div class="g"><span></span><span class="bm"></span><span class="bm">8</span><span class="bm">9</span><span class="bm">13</span><span></span><span>4</span><span class="x2">9</span><span class="x2">0</span><span class="x2">3</span><span>−</span><span>1</span><span>4</span><span>7</span><span>4</span><span class="ln"></span><span></span><span class="cell ok">3</span><span class="cell ok">4</span><span class="cell ok">2</span><span class="cell ok">9</span></div>
+<div class="fb ok"><h3>✔ 答对了</h3><p>4903 − 1474 = 3429</p><div class="btn">继续</div></div></div></div><div class="wrap"><div class="cap">③ 结算：只在这里放大庆祝，EX 作为奖励关</div><div class="ph"><div class="top"><span class="x">✕</span><div class="bar"><i style="width:100%"></i></div><span class="streak">🔥 10</span></div>
+<div class="center"><div class="ha" style="transform:scale(1.8);margin-bottom:20px"><svg class="cat" viewBox="0 0 120 110" style="--c:${color}">
+  <g stroke="#232a4d" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+    <rect x="36" y="78" width="48" height="28" rx="14" fill="#ff9ec4"/>
+    <path d="M20 44 L27 6 L52 26 Z" fill="#ff9ec4"/><path d="M100 44 L93 6 L68 26 Z" fill="#ff9ec4"/>
+    <ellipse cx="60" cy="52" rx="44" ry="34" fill="#ff9ec4"/>
+  </g>
+  <path d="M28 16 L31 32 L42 24Z" fill="#fff" opacity=".5"/><path d="M92 16 L89 32 L78 24Z" fill="#fff" opacity=".5"/>
+  <ellipse cx="30" cy="62" rx="8" ry="5" fill="#ff5c9a" opacity=".45"/><ellipse cx="90" cy="62" rx="8" ry="5" fill="#ff5c9a" opacity=".45"/>
+  <g fill="#232a4d" class="e-n"><ellipse cx="44" cy="50" rx="5.5" ry="7.5"/><ellipse cx="76" cy="50" rx="5.5" ry="7.5"/>
+    <circle cx="46" cy="47" r="2.2" fill="#fff"/><circle cx="78" cy="47" r="2.2" fill="#fff"/></g>
+  <g fill="none" stroke="#232a4d" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path class="e-h" d="M37 53 Q44 42 51 53 M69 53 Q76 42 83 53"/>
+    <path class="e-s" d="M38 44 L50 50 L38 56 M82 44 L70 50 L82 56"/>
+    <path class="m-n" d="M52 62 Q56 67 60 62 Q64 67 68 62"/>
+    <path d="M14 58 L2 55 M14 64 L3 66 M106 58 L118 55 M106 64 L117 66" stroke-width="3"/>
+  </g>
+  <path class="m-o" d="M50 61 Q60 80 70 61 Z" fill="#e0306f" stroke="#232a4d" stroke-width="4" stroke-linejoin="round"/>
+  <path class="sweat" d="M100 22 q7 10 0 15 q-7 -5 0 -15Z" fill="#7cc8ff" stroke="#232a4d" stroke-width="2.5"/>
+</svg></div>
+<div style="font-size:22px;font-weight:800">这一组全部完成！</div>
+<div class="big">12.6 亿</div><div style="color:var(--mute);font-size:14px;margin-top:-10px">本组嗨值</div>
+<div class="stats"><div class="st"><small>正确率</small><b>90%</b></div><div class="st"><small>最长连对</small><b>8</b></div><div class="st"><small>用时</small><b>3:12</b></div></div></div>
+<div style="padding:0 20px 26px"><div class="btn" style="background:var(--acc);color:var(--ink)">挑战 EX · 20 秒</div><div style="text-align:center;margin-top:12px;color:var(--mute);font-weight:700">先休息</div></div></div></div>
